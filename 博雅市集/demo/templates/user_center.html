@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}个人中心 - 博雅市集{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">我的发布</h2>
+    <div class="row">
+        {% for item in user_items %}
+            <div class="col-md-4 mb-4">
+                <div class="card item-card">
+                    {% if item.image_path %}
+                        <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top item-image" alt="{{ item.title }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.jpg') }}" class="card-img-top item-image" alt="默认图片">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-danger font-weight-bold">¥{{ item.price }}</p>
+                        <p class="card-text">
+                            状态: 
+                            <span class="badge bg-{{ 'success' if item.status == 'available' else 'secondary' }}">
+                                {{ '在售' if item.status == 'available' else '已下架' }}
+                            </span>
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('item_detail', item_id=item.id) }}" class="btn btn-outline-primary">查看详情</a>
+                            {% if item.status == 'available' %}
+                                <form action="{{ url_for('remove_item', item_id=item.id) }}" method="post">
+                                    <button type="submit" class="btn btn-outline-danger">下架商品</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12 text-center">
+                <p class="text-muted">您还没有发布任何商品</p>
+                <a href="{{ url_for('publish') }}" class="btn btn-primary">立即发布</a>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

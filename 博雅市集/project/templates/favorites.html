@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}我的收藏 - 博雅市集{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">我的收藏</h2>
+    <div class="row">
+        {% for item in favorite_items %}
+            <div class="col-md-4 mb-4">
+                <div class="card item-card">
+                    {% if item.image_path %}
+                        <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top item-image" alt="{{ item.title }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.jpg') }}" class="card-img-top item-image" alt="默认图片">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-danger font-weight-bold">¥{{ item.price }}</p>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-outline-primary">查看详情</a>
+                            <form action="{{ url_for('main.toggle_favorite', item_id=item.id) }}" method="post">
+                                <button type="submit" class="btn btn-outline-danger">取消收藏</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12 text-center">
+                <p class="text-muted">您还没有收藏任何商品</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">去逛逛</a>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

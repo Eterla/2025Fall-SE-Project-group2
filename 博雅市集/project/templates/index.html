@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <!-- 搜索框 -->
+    <div class="mb-4">
+        <form action="{{ url_for('main.index') }}" method="get" class="d-flex">
+            <input type="text" name="search" placeholder="搜索商品..." class="form-control me-2" value="{{ search_query }}">
+            <button type="submit" class="btn btn-primary">搜索</button>
+        </form>
+    </div>
+
+    <!-- 商品列表 -->
+    <h2 class="mb-4">{% if search_query %}搜索结果: {{ search_query }}{% else %}最新商品{% endif %}</h2>
+    <div class="row">
+        {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card item-card">
+                    {% if item.image_path %}
+                        <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top item-image" alt="{{ item.title }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.jpg') }}" class="card-img-top item-image" alt="默认图片">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-danger font-weight-bold">¥{{ item.price }}</p>
+                        <p class="card-text text-muted" style="font-size: 0.9rem;">{{ item.created_at }}</p>
+                        <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-primary w-100">查看详情</a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12 text-center">
+                <p class="text-muted">暂无商品</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

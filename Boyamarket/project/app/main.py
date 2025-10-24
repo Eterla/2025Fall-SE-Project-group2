@@ -37,8 +37,8 @@ def item_detail(item_id):
         return redirect(url_for("main.index"))
     seller = User.find_by_id(item["seller_id"]) if item.get("seller_id") else None
     is_favorite = False
-    if "user_id" in session:
-        is_favorite = Favorite.is_favorited(session["user_id"], item_id)
+    # if "user_id" in session:
+    #     is_favorite = Favorite.is_favorited(session["user_id"], item_id)
     return render_template("item_detail.html", item=item, seller=seller, is_favorite=is_favorite)
 
 @main_bp.route("/user_center")

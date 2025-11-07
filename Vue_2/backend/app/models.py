@@ -26,7 +26,7 @@ class User:
             raise UsernameTakenError()
         
         # 插入新用户
-        created_at = datetime.datetime.now()
+        created_at = datetime.now()
         cursor = db.execute("""
             INSERT INTO users (username, password, email, phone, created_at)
             VALUES (?, ?, ?, ?, ?)

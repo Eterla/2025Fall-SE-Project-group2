@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash  # 更安全的密码处理
 from functools import wraps
 import jwt
-import datetime
+from datetime import datetime, timedelta
 from flask import current_app
 # 在 auth.py 开头的导入部分添加
 from .models import User  # 从当前目录的 models.py 中导入 User 类
@@ -14,8 +14,8 @@ auth_bp = Blueprint("auth", __name__)
 # JWT 令牌生成
 def generate_token(user_id):
     payload = {
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),  # 有效期24小时
-        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(hours=24),  # 有效期24小时
+        'iat': datetime.utcnow(),
         'sub': user_id
     }
     return jwt.encode(

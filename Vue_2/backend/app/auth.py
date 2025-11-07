@@ -136,7 +136,7 @@ def register():
         }), 500
 
 # 登录接口
-@auth_bp.route("/api/auth/login", methods=["POST"])
+@auth_bp.route("/auth/login", methods=["POST"])
 def login():
     data = request.get_json()
     

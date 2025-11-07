@@ -41,6 +41,7 @@
 </template>
 
 <script>
+import authStore from '../stores/auth'; // 引入认证状态管理
 export default {
   data() {
     return {
@@ -60,12 +61,16 @@ export default {
         });
         console.log('登录响应:', response);
         // 处理登录成功（根据api.md的响应格式）
-        if (response.ok) {
+        if (response.data.ok) {
           console.log('登录成功:', response.data);
+          const token = response.data.data.access_token;
+          const user = response.data.data.user;
           // 保存后端返回的token和用户信息到localStorage
-          localStorage.setItem('access_token', response.data.access_token);
-          localStorage.setItem('user_info', JSON.stringify(response.data.user));
-          
+          localStorage.setItem('access_token', token);
+          localStorage.setItem('user_info', JSON.stringify(user));
+
+          // 更新 store（import authStore）
+          authStore.setAuth(token, user);
           // 跳转到首页或其他受保护的页面
           this.$router.push('/');
   

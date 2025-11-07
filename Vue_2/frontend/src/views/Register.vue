@@ -112,10 +112,9 @@ export default {
           email: this.email
         }
         );
-        console.log('注册响应:', response && response.data ? response.data : response);
         console.log('response:', response);
 
-        if (response.data && response.ok) {
+        if (response.data.data && response.data.ok) {
           alert('注册成功，请登录');
           this.$router.push('/login');
         } else {

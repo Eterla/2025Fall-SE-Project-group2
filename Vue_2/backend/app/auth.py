@@ -185,7 +185,10 @@ def login():
             "expires_in": 86400,  # 24小时（秒）
             "user": {
                 "id": user['id'],
-                "username": user['username']
+                "username": user['username'],
+                "email": user['email'],
+                "phone": user['phone'],
+                "created_at": user['created_at'].isoformat()
             }
         }
     }), 200

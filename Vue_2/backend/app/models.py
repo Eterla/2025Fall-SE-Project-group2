@@ -1,6 +1,6 @@
 # app/models.py
 import sqlite3
-import datetime
+from datetime import datetime
 from flask import current_app, g
 from .exceptions import UsernameTakenError  # 从exceptions.py导入异常  <-- 修改这里
 
@@ -112,6 +112,7 @@ class Item:
                    image_path, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (user_id, title, description, price, tags, image_path, 'available', datetime.now())
             )
+            print(f"Published item for user_id {user_id} with title {title}")  # 调试输出
             conn.commit()
             return cursor.lastrowid
         finally:

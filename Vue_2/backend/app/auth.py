@@ -194,14 +194,14 @@ def login():
     }), 200
 
 # 登出接口
-@auth_bp.route("/api/auth/logout", methods=["POST"])
+@auth_bp.route("/auth/logout", methods=["POST"])
 @token_required
 def logout():
     session.pop('user_id', None)  # 清除session
     return jsonify({"ok": True}), 200
 
 # 获取当前用户信息
-@auth_bp.route("/api/auth/me", methods=["GET"])
+@auth_bp.route("/auth/me", methods=["GET"])
 @token_required
 def get_current_user():
     user = User.find_by_id(session['user_id'])

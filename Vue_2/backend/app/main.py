@@ -9,7 +9,7 @@ from datetime import datetime
 main_bp = Blueprint("main", __name__)
 
 # 修改：首页商品列表API
-@main_bp.route("/api/items")
+@main_bp.route("/items")
 def index():
     q = request.args.get("search", "")
     items = Item.search_available(q)
@@ -19,7 +19,7 @@ def index():
     })
 
 # 修改：发布商品API
-@main_bp.route("/api/items", methods=["POST"])
+@main_bp.route("/items", methods=["POST"])
 @token_required
 def publish():
     # 处理表单数据（支持文件上传）
@@ -43,6 +43,7 @@ def publish():
     except ValueError:
         price_val = 0.0
 
+    print(f"Received publish request: title={title}, description={description}, price={price_val}, tags={tags}, image={image}")  # 调试输出
     item_id = Item.publish(session["user_id"], title, description, price_val, tags, image)
     return jsonify({
         "ok": True,
@@ -54,7 +55,7 @@ def publish():
     }), 201
 
 # 修改：商品详情API
-@main_bp.route("/api/items/<int:item_id>")
+@main_bp.route("/items/<int:item_id>")
 def item_detail(item_id):
     item = Item.find_by_id(item_id)
     if not item:
@@ -80,7 +81,7 @@ def item_detail(item_id):
     })
 
 # 新增：获取用户发布的商品
-@main_bp.route("/api/user/items")
+@main_bp.route("/user/items")
 @token_required
 def user_items():
     items = Item.find_by_user(session['user_id'])
@@ -90,7 +91,7 @@ def user_items():
     })
 
 # 新增：下架商品
-@main_bp.route("/api/items/<int:item_id>/status", methods=["PUT"])
+@main_bp.route("/items/<int:item_id>/status", methods=["PUT"])
 @token_required
 def update_item_status(item_id):
     item = Item.find_by_id(item_id)
@@ -144,7 +145,7 @@ def update_item_status(item_id):
         }), 500
 
 # 新增：收藏商品
-@main_bp.route("/api/favorites", methods=["POST"])
+@main_bp.route("/favorites", methods=["POST"])
 @token_required
 def add_favorite():
     data = request.get_json()
@@ -180,7 +181,7 @@ def add_favorite():
     })
 
 # 新增：取消收藏
-@main_bp.route("/api/favorites/<int:item_id>", methods=["DELETE"])
+@main_bp.route("/favorites/<int:item_id>", methods=["DELETE"])
 @token_required
 def remove_favorite(item_id):
     success = Favorite.remove(session['user_id'], item_id)
@@ -193,7 +194,7 @@ def remove_favorite(item_id):
     })
 
 # 新增：获取收藏列表
-@main_bp.route("/api/favorites")
+@main_bp.route("/favorites")
 @token_required
 def get_favorites():
     favorites = Favorite.get_user_favorites(session['user_id'])
@@ -203,7 +204,7 @@ def get_favorites():
     })
 
 # 新增：发送消息
-@main_bp.route("/api/messages", methods=["POST"])
+@main_bp.route("/messages", methods=["POST"])
 @token_required
 def send_message():
     data = request.get_json()
@@ -256,7 +257,7 @@ def send_message():
     }), 201
 
 # 新增：获取消息列表
-@main_bp.route("/api/messages/conversations")
+@main_bp.route("/messages/conversations")
 @token_required
 def get_conversations():
     conversations = Message.get_conversations(session['user_id'])
@@ -266,7 +267,7 @@ def get_conversations():
     })
 
 # 新增：获取聊天记录
-@main_bp.route("/api/messages/conversations/<int:other_user_id>/<int:item_id>")
+@main_bp.route("/messages/conversations/<int:other_user_id>/<int:item_id>")
 @token_required
 def get_chat_history(other_user_id, item_id):
     # 检查商品是否存在

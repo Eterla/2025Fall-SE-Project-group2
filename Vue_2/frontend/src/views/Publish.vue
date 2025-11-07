@@ -84,8 +84,6 @@
 </template>
 
 <script>
-import axios from 'axios'
-
 export default {
   data() {
     return {
@@ -104,8 +102,11 @@ export default {
     // 处理图片上传预览
     handleImageUpload(e) {
       const file = e.target.files[0];
-      if (!file) return;
-
+      if (!file) {
+        // default image
+        this.form.image = '../../public/defaultPicture.png';
+        return;
+      }
       // 限制图片大小（如不超过5MB）
       if (file.size > 5 * 1024 * 1024) {
         alert('图片大小不能超过5MB');
@@ -152,6 +153,7 @@ export default {
           formData.append('image', this.form.image); // 图片文件
         }
 
+        const axios = this.$axios;
         // 调用后端发布商品接口（暂时模拟，后续替换为真实请求）
         const response = await axios.post('/api/items', formData, {
           headers: {

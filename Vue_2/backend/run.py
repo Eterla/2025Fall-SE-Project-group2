@@ -33,4 +33,6 @@ with app.app_context():
     init_db()
 
 if __name__ == '__main__':
+    for rule in app.url_map.iter_rules():
+        print(f"路由: {rule.rule} 方法: {rule.methods}")
     app.run(debug=True)

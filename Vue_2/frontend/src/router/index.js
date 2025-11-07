@@ -20,6 +20,7 @@ const requireAuth = (to, from, next) => {
   }
 };
 
+// 客户端路由配置
 const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },

@@ -78,43 +78,58 @@
 </template>
 
 <script>
-// 导入axios（后面会用于调用后端注册接口）
-import axios from 'axios'
-
 export default {
   data() {
     return {
-      username: '',       // 用户名
-      password: '',       // 密码
-      confirmPassword: '',// 确认密码
-      email: ''           // 邮箱
+      username: '',
+      password: '',
+      confirmPassword: '',
+      email: ''
     }
   },
   methods: {
     async handleRegister() {
-      // 简单验证
       if (this.password !== this.confirmPassword) {
         alert('两次密码不一致');
         return;
       }
 
+      // 使用 main.js 全局注入的 this.$axios，避免路径 import 错误
+      const axios = this.$axios;
+
+      // 明确写出要请求的相对路径（以 /api 开头以触发 devServer proxy）
+      const url = '/api/auth/register';
+      console.log('[Register] 准备发送注册请求', url, {
+        username: this.username,
+        email: this.email
+      });
+      console.log('[Register] axios defaults baseURL:', axios.defaults.baseURL);
+
       try {
-        // 调用后端注册接口（暂时模拟，后续替换为真实请求）
-        const response = await axios.post('/api/auth/register', {
+        const response = await axios.post(url, {
           username: this.username,
           password: this.password,
           email: this.email
-        });
+        }
+        );
+        console.log('注册响应:', response && response.data ? response.data : response);
+        console.log('response:', response);
 
-        if (response.data.ok) {
+        if (response.data && response.ok) {
           alert('注册成功，请登录');
-          this.$router.push('/login'); // 跳转到登录页
+          this.$router.push('/login');
         } else {
-          alert(response.data.message || '注册失败');
+          alert((response.data && response.data.message) || '注册失败');
         }
       } catch (error) {
         console.error('注册请求失败:', error);
-        alert('网络错误，请稍后再试');
+        // 如果 error.response 存在，可以打印更多信息
+        if (error.response) {
+          console.error('错误响应体:', error.response.status, error.response.data);
+          alert('请求错误: ' + error.response.status);
+        } else {
+          alert('网络错误，请稍后再试');
+        }
       }
     }
   }

@@ -1,41 +1,47 @@
 # app/models.py
 import sqlite3
 import datetime
-from flask import g
+from flask import current_app, g
 from .exceptions import UsernameTakenError  # 从exceptions.py导入异常  <-- 修改这里
 
+def get_db():
+    """获取数据库连接"""
+    if 'db' not in g:
+        g.db = sqlite3.connect(
+            current_app.config['DATABASE'],
+            detect_types=sqlite3.PARSE_DECLTYPES
+        )
+        g.db.row_factory = sqlite3.Row
+    return g.db
 
 class User:
     @staticmethod
-    def create(username, password, email, phone):
-        conn = g.db()
-        cursor = conn.cursor()
+    def create(username, password, email='', phone=''):
+        db = get_db()
         
         # 检查用户名是否已存在
-        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        cursor = db.execute("SELECT id FROM users WHERE username = ?", (username,))
         if cursor.fetchone():
-            conn.close()
             raise UsernameTakenError()
         
         # 插入新用户
         created_at = datetime.datetime.now()
-        cursor.execute("""
+        cursor = db.execute("""
             INSERT INTO users (username, password, email, phone, created_at)
             VALUES (?, ?, ?, ?, ?)
         """, (username, password, email, phone, created_at))
         
         user_id = cursor.lastrowid
-        conn.commit()
+        db.commit()
         
         # 查询新用户信息并返回
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        user = cursor.fetchone()
-        conn.close()
+        user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         
         return {
             "id": user['id'],
             "username": user['username'],
             "email": user['email'],
+            "phone": user['phone'],
             "created_at": user['created_at']
         }
     

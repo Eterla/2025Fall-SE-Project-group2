@@ -1,1 +1,9 @@
 Boyamarket/ 
+test/
+test_app.sh
+test_sql_schema.py
+.DS_Store
+.vscode/
+.idea/
+*.log
+*.pyc

@@ -73,9 +73,12 @@ def token_required(f):
     return decorated
 
 # 注册接口
-@auth_bp.route("/api/auth/register", methods=["POST"])
+@auth_bp.route("/auth/register", methods=["POST"])
 def register():
     data = request.get_json()
+    
+    # 查看前端传来的数据
+    print(f"注册请求数据：{data}")
     
     # 验证必填参数
     if not data or not data.get('username') or not data.get('password'):
@@ -109,7 +112,8 @@ def register():
                 "id": new_user['id'],
                 "username": new_user['username'],
                 "email": new_user['email'],
-                "created_at": new_user['created_at'].isoformat()  # 数据库中的创建时间
+                "phone": new_user['phone'],
+                "created_at": new_user['created_at'].isoformat()
             }
         }), 201
     except UsernameTakenError:

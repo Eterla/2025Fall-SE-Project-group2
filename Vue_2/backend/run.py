@@ -13,22 +13,18 @@ def home():
 
 # 初始化数据库表
 def init_db():
-    # 确保 instance 目录存在
+    # 确保 instance 目录存在, 若没有则创建
     os.makedirs(app.instance_path, exist_ok=True)
     
-    # 连接数据库并创建 users 表
+    # 连接数据库
     conn = sqlite3.connect(os.path.join(app.instance_path, 'market.db'))
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            email TEXT,
-            phone TEXT,
-            created_at DATETIME NOT NULL
-        )
-    """)
+    
+    # 读取 schema.sql
+    with open('app/schema.sql', 'r', encoding='utf-8') as f:
+        schema = f.read()
+    
+    # 执行脚本创建表
+    conn.executescript(schema) 
     conn.commit()
     conn.close()
 

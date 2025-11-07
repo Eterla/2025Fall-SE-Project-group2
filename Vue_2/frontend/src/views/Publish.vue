@@ -104,7 +104,7 @@ export default {
       const file = e.target.files[0];
       if (!file) {
         // default image
-        this.form.image = '../../public/defaultPicture.png';
+        this.form.image = '2025Fall-SE-Project-group2/Vue_2/frontend/public/images/defaultPicture.png';
         return;
       }
       // 限制图片大小（如不超过5MB）

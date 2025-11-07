@@ -2,8 +2,14 @@
 import os
 import sqlite3  # 新增：导入sqlite3模块
 from app import create_app
+from utils import make_response_ok, error_response
 
 app = create_app()
+
+@app.route('/')
+def home():
+    return make_response_ok({"message": "Welcome to the Marketplace API"})
+
 
 # 初始化数据库表
 def init_db():

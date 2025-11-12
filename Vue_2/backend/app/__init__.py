@@ -65,8 +65,10 @@ def create_app(test_config=None):
     # 注册蓝图（确保在数据库工具之后定义，避免导入时依赖问题）
     from .auth import auth_bp
     from .main import main_bp
+    from .favorite import favorite_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(favorite_bp)
 
     # 应用上下文结束时关闭数据库连接
     app.teardown_appcontext(close_db)

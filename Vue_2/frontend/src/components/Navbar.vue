@@ -21,13 +21,13 @@
             <router-link class="nav-link" to="/publish">发布商品</router-link>
           </li>
           <li class="nav-item" v-if="isLogin">
-            <router-link class="nav-link" to="/user-center">个人中心</router-link>
-          </li>
-          <li class="nav-item" v-if="isLogin">
             <router-link class="nav-link" to="/favorites">我的收藏</router-link>
           </li>
           <li class="nav-item" v-if="isLogin">
             <router-link class="nav-link" to="/messages">消息</router-link>
+          </li>
+          <li class="nav-item" v-if="isLogin">
+            <router-link class="nav-link" to="/user-center">个人中心</router-link>
           </li>
         </ul>
         
@@ -48,9 +48,46 @@
 export default {
   data() {
     return {
-      // 临时默认值，后面会对接登录状态
-      isLogin: false,  // 是否登录
-      username: ''     // 用户名
+      isLogin: false,
+      username: ''
+    }
+  },
+  mounted() {
+    // 组件挂载时检查登录状态
+    this.checkLoginStatus()
+    
+    // 监听登录状态变化
+    window.addEventListener('storage', this.checkLoginStatus)
+    window.addEventListener('login-status-changed', this.checkLoginStatus)
+  },
+  beforeUnmount() {
+    // 清理事件监听
+    window.removeEventListener('storage', this.checkLoginStatus)
+    window.removeEventListener('login-status-changed', this.checkLoginStatus)
+  },
+  methods: {
+    checkLoginStatus() {
+      // 从 localStorage 读取登录状态（修改为与 Login.vue 一致的 key）
+      const token = localStorage.getItem('access_token')  // 改为 access_token
+      const userInfo = localStorage.getItem('user_info')  // 改为 user_info
+      
+      this.isLogin = !!token
+      if (userInfo) {
+        try {
+          const user = JSON.parse(userInfo)
+          this.username = user.username || user.name || ''  // 根据实际的用户信息结构获取用户名
+        } catch (e) {
+          this.username = ''
+        }
+      } else {
+        this.username = ''
+      }
+    }
+  },
+  watch: {
+    // 监听路由变化，确保登录状态实时更新
+    $route() {
+      this.checkLoginStatus()
     }
   }
 }

@@ -84,6 +84,7 @@ class User:
 class Item:
     @staticmethod
     def publish(user_id, title, description, price, tags, image):
+        logger.debug(f"Publishing item: user_id={user_id}, title={title}, price={price}, tags={tags}")
         conn = db.get_db()
         image_path = None
         if image:
@@ -100,10 +101,18 @@ class Item:
             image.save(os.path.join(upload_folder, filename))
         
         cursor = conn.cursor()
+        # using user_id to get seller_name:
+        user = User.find_by_id(user_id)
+        seller_name = user['username'] if user else 'Unknown'
+        # item_id is auto-incremented, so don't need to specify it
+        curr_time = datetime.datetime.now() 
+        # convert time to string for sqlite3 compatibility
+        # And at create time, update time is same as create time, so just use both below
+        curr_time = curr_time.strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute(
-            """INSERT INTO items (seller_id, title, description, price, tags, 
-               image_path, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (user_id, title, description, price, tags, image_path, 'available', datetime.datetime.now())
+            """INSERT INTO items (seller_id, seller_name, title, description, price, tags, 
+               image_path, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, seller_name, title, description, price, tags, image_path, 'available', curr_time, curr_time) 
         )
         conn.commit()
         return cursor.lastrowid

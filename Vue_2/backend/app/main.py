@@ -40,7 +40,7 @@ def publish():
     price = request.form.get("price", "0")
     tags = request.form.get("tags", "")
     image = request.files.get("image")
-    
+    logger.debug(f"publish route recv[ title: {title}, description: {description}, price: {price}, tags: {tags}, image: {image} ]")
     if not title:
         return jsonify({
             "ok": False,
@@ -219,10 +219,10 @@ def get_favorites():
         "data": favorites
     })
 
-# ADD:(wzy) Check favorite status API
+# ADD:Check favorite status API
 @main_bp.route("/api/favorites/check", methods=["GET"])
 def check_favorite_status():
-
+    # TODO: implement this API
     return jsonify({
 
     })

@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -69,9 +69,9 @@ export default {
     async getConversations() {
       try {
         // 调用后端接口获取消息列表
-        const response = await axios.get('/api/messages/conversations');
-        if (response.data.ok) {
-          this.conversations = response.data.data;
+        const response = await axios.get('/messages/conversations');
+        if (response.ok) {
+          this.conversations = response.data;
         } else {
           alert(response.data.message || '获取消息列表失败');
         }

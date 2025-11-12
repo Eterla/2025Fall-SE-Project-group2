@@ -82,7 +82,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -108,8 +108,8 @@ export default {
         } else {
           // 如果本地没有，调用接口获取（实际项目中需要后端接口支持）
           const response = await axios.get('/api/auth/me');
-          if (response.data.ok) {
-            this.userInfo = response.data.data;
+          if (response.ok) {
+            this.userInfo = response.data;
             localStorage.setItem('user_info', JSON.stringify(this.userInfo)); // 保存到本地
           }
         }
@@ -124,8 +124,8 @@ export default {
       try {
         // 调用后端接口获取当前用户发布的商品
         const response = await axios.get('/api/items/my');
-        if (response.data.ok) {
-          this.myItems = response.data.data;
+        if (response.ok) {
+          this.myItems = response.data;
         } else {
           alert(response.data.message || '获取商品列表失败');
         }
@@ -193,7 +193,7 @@ export default {
           status: newStatus
         });
 
-        if (response.data.ok) {
+        if (response.ok) {
           alert(`商品已${actionText}成功`);
           // 重新获取商品列表
           this.getMyItems();

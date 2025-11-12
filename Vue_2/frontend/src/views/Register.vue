@@ -79,7 +79,7 @@
 
 <script>
 // 导入axios（后面会用于调用后端注册接口）
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -100,16 +100,17 @@ export default {
 
       try {
         // 调用后端注册接口（暂时模拟，后续替换为真实请求）
-        const response = await axios.post('/api/auth/register', {
+        const response = await axios.post('/auth/register', {
           username: this.username,
           password: this.password,
           email: this.email
         });
 
-        if (response.data.ok) {
+        if (response.ok) {
           alert('注册成功，请登录');
           this.$router.push('/login'); // 跳转到登录页
         } else {
+          console.error('注册失败:', response.data);
           alert(response.data.message || '注册失败');
         }
       } catch (error) {

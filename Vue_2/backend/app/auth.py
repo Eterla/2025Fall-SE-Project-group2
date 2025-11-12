@@ -109,6 +109,7 @@ def register():
             email=email,
             phone=phone
         )
+        logger.info(f"User registered successfully: {username}")
         return jsonify({
             "ok": True,
             "data": {
@@ -119,6 +120,7 @@ def register():
             }
         }), 201
     except UsernameTakenError:
+        logger.error(f"Username already taken: {username}")
         return jsonify({
             "ok": False,
             "error": {

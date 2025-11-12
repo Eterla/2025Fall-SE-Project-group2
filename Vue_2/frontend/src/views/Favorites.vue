@@ -56,7 +56,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -86,9 +86,9 @@ export default {
     async getFavorites() {
       try {
         // 调用后端接口获取收藏列表
-        const response = await axios.get('/api/favorites');
-        if (response.data.ok) {
-          this.favorites = response.data.data;
+        const response = await axios.get('/favorites');
+        if (response.ok) {
+          this.favorites = response.data;
         } else {
           alert(response.data.message || '获取收藏列表失败');
         }
@@ -126,8 +126,8 @@ export default {
 
       try {
         // 调用后端接口取消收藏
-        const response = await axios.delete(`/api/favorites/${itemId}`);
-        if (response.data.ok) {
+        const response = await axios.delete(`/favorites/${itemId}`);
+        if (response.ok) {
           alert('取消收藏成功');
           // 重新获取收藏列表
           this.getFavorites();

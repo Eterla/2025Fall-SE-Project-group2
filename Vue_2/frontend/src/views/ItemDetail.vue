@@ -74,7 +74,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -97,9 +97,9 @@ export default {
     async getItemDetail() {
       const itemId = this.$route.params.id; // 从路由参数中获取商品ID
       try {
-        const response = await axios.get(`/api/items/${itemId}`);
-        if (response.data.ok) {
-          this.item = response.data.data;
+        const response = await axios.get(`/items/${itemId}`);
+        if (response.ok) {
+          this.item = response.data;
           // 检查是否已收藏
           this.checkFavoriteStatus();
         } else {
@@ -127,8 +127,8 @@ export default {
     async checkFavoriteStatus() {
       if (!this.isLogin || !this.item) return;
       try {
-        const response = await axios.get(`/api/favorites/check?item_id=${this.item.id}`);
-        this.isFavorite = response.data.data.is_favorite;
+        const response = await axios.get(`/favorites/check?item_id=${this.item.id}`);
+        this.isFavorite = response.data.is_favorite;
       } catch (error) {
         console.error('检查收藏状态失败:', error);
       }
@@ -139,12 +139,12 @@ export default {
       try {
         if (this.isFavorite) {
           // 取消收藏
-          await axios.delete(`/api/favorites/${this.item.id}`);
+          await axios.delete(`/favorites/${this.item.id}`);
           this.isFavorite = false;
           alert('取消收藏成功');
         } else {
           // 收藏商品
-          await axios.post('/api/favorites', { item_id: this.item.id });
+          await axios.post('/favorites', { item_id: this.item.id });
           this.isFavorite = true;
           alert('收藏成功');
         }

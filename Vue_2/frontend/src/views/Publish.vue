@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -153,13 +153,13 @@ export default {
         }
 
         // 调用后端发布商品接口（暂时模拟，后续替换为真实请求）
-        const response = await axios.post('/api/items', formData, {
+        const response = await axios.post('/items', formData, {
           headers: {
             'Content-Type': 'multipart/form-data' // 上传文件必须的头信息
           }
         });
 
-        if (response.data.ok) {
+        if (response.ok) {
           alert('商品发布成功！');
           this.$router.push('/'); // 发布成功后跳回首页
         } else {

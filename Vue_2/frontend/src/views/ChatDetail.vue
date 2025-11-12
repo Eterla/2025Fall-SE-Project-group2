@@ -82,7 +82,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -141,9 +141,9 @@ export default {
     // 获取关联商品信息
     async getRelatedItem() {
       try {
-        const response = await axios.get(`/api/items/${this.itemId}`);
-        if (response.data.ok) {
-          this.relatedItem = response.data.data;
+        const response = await axios.get(`/items/${this.itemId}`);
+        if (response.ok) {
+          this.relatedItem = response.data;
         }
       } catch (error) {
         console.error('获取关联商品失败:', error);
@@ -154,14 +154,14 @@ export default {
     // 获取历史消息
     async getHistoryMessages() {
       try {
-        const response = await axios.get(`/api/messages/history`, {
+        const response = await axios.get(`/messages/history`, {
           params: {
             other_user_id: this.otherUserId,
             item_id: this.itemId
           }
         });
-        if (response.data.ok) {
-          this.messages = response.data.data;
+        if (response.ok) {
+          this.messages = response.data;
         } else {
           alert('获取历史消息失败');
         }
@@ -196,15 +196,15 @@ export default {
       this.sending = true;
       try {
         // 调用后端发送消息接口
-        const response = await axios.post('/api/messages/send', {
+        const response = await axios.post('/messages/send', {
           other_user_id: this.otherUserId,
           item_id: this.itemId,
           content: content
         });
 
-        if (response.data.ok) {
+        if (response.ok) {
           // 发送成功，添加到消息列表
-          this.messages.push(response.data.data);
+          this.messages.push(response.data);
           this.messageContent = ''; // 清空输入框
           this.scrollToBottom(); // 滚动到最新消息
         } else {

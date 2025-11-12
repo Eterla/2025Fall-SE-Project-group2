@@ -55,19 +55,19 @@ export default {
     async handleLogin() { // 添加async关键字，支持await
       try {
         // 调用后端登录接口（与api.md匹配的地址）
-        const response = await axios.post('/api/auth/login', {
+        const response = await api.post('/auth/login', {
           username: this.username,
           password: this.password
         });
-
+        console.log('login response:', response);
         // 处理登录成功（根据api.md的响应格式）
-        if (response.data.ok) {
+        if (response.ok) {
           // 保存后端返回的token和用户信息到localStorage
-          localStorage.setItem('access_token', response.data.data.access_token);
-          localStorage.setItem('user_info', JSON.stringify(response.data.data.user));
-          
+          localStorage.setItem('access_token', response.data.access_token);
+          localStorage.setItem('user_info', JSON.stringify(response.data.user));
+          console.log('login successful, token and user info saved.');
           // 登录成功后跳转到首页
-          this.$router.push('/');
+          await this.$router.push('/');
           // 刷新页面让全局状态生效（可选）
           window.location.reload();
         } else {

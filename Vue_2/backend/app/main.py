@@ -66,6 +66,8 @@ def publish():
 # 修改：商品详情API
 @main_bp.route("/api/items/<int:item_id>")
 def item_detail(item_id):
+    logger.warning(f"Received request for item ID: {item_id}")
+    logger.debug(f"Successfully received request for item ID: {item_id}")
     item = Item.find_by_id(item_id)
     if not item:
         return jsonify({

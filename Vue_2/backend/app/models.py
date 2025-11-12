@@ -151,6 +151,19 @@ class Item:
     def find_by_id(item_id):
 
         conn = db.get_db()
+        # before find, logout all items in database first
+        # unlock items that were temporarily locked more than 24 hours ago
+        try:
+            cutoff = datetime.datetime.now() - datetime.timedelta(hours=24)
+            conn.execute(
+                "UPDATE items SET status = ?, updated_at = ? WHERE status = ? AND updated_at < ?",
+                ('available', datetime.datetime.now(), 'locked', cutoff)
+            )
+            conn.commit()
+        except Exception:
+            logger.exception("Failed to cleanup locked items before find_by_id")
+
+        logger.debug(f"Finding item by ID: {item_id}")
         item = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM items JOIN users ON items.seller_id = users.id 

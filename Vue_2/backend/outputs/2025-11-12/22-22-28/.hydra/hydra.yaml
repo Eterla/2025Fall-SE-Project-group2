@@ -93,14 +93,14 @@ hydra:
         class: logging.StreamHandler
         formatter: simple
         stream: ext://sys.stdout
-        level: WARNING
+        level: DEBUG
       file:
         class: logging.FileHandler
         formatter: simple
         filename: ${hydra.runtime.output_dir}/${hydra.job_logging.name}.log
         level: DEBUG
     root:
-      level: INFO
+      level: DEBUG
       handlers:
       - console
       - file
@@ -143,7 +143,7 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /Users/weizhiyuan/z_workarea/Study/PKU5/software_engineering/classproject/2025Fall-SE-Project-group2/Vue_2/backend/outputs/2025-11-12/20-59-37
+    output_dir: /Users/weizhiyuan/z_workarea/Study/PKU5/software_engineering/classproject/2025Fall-SE-Project-group2/Vue_2/backend/outputs/2025-11-12/22-22-28
     choices:
       hydra/env: default
       hydra/callbacks: null

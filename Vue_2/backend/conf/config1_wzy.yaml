@@ -5,7 +5,7 @@ hydra:
       console:
         class: logging.StreamHandler
         formatter: simple
-        level: WARNING
+        level: DEBUG
         stream: ext://sys.stdout
 
       file:
@@ -13,4 +13,8 @@ hydra:
         formatter: simple
         level: DEBUG
         filename: ${hydra.runtime.output_dir}/${hydra.job_logging.name}.log
-        
+    
+    root:
+      level: DEBUG
+      handlers: [console, file]
+

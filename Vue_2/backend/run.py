@@ -71,7 +71,7 @@ def main(cfg: DictConfig):
     
     # 启动Flask应用
     logger.info("启动Flask应用...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
 
 if __name__ == '__main__':
     main()

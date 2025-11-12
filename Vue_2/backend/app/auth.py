@@ -1,3 +1,7 @@
+import os
+import logging
+logger = logging.getLogger(__name__)
+
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash  # 更安全的密码处理
 from functools import wraps
@@ -75,6 +79,7 @@ def token_required(f):
 # 注册接口
 @auth_bp.route("/api/auth/register", methods=["POST"])
 def register():
+    logger.debug("Received registration request")
     data = request.get_json()
     
     # 验证必填参数
@@ -91,7 +96,8 @@ def register():
     password = data.get('password')
     email = data.get('email', '')
     phone = data.get('phone', '')
-    
+    logger.debug(f"Registering user: {username}, password:{password}, email: {email}, phone: {phone}")
+
     # 密码加密（自动加盐）
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
     
@@ -109,7 +115,7 @@ def register():
                 "id": new_user['id'],
                 "username": new_user['username'],
                 "email": new_user['email'],
-                "created_at": new_user['created_at'].isoformat()  # 数据库中的创建时间
+                "created_at": new_user['created_at'] # NOTICE: Here returns a str, not a isoformat(), so fixed by removing .isoformat() ---wzy
             }
         }), 201
     except UsernameTakenError:
@@ -122,7 +128,7 @@ def register():
         }), 409
     except Exception as e:
         # 捕获其他异常（如数据库错误）
-        print(f"注册失败：{str(e)}")  # 仅后端打印，不暴露给前端
+        logger.error(f"Error during registration: {e}")
         return jsonify({
             "ok": False,
             "error": {
@@ -134,6 +140,7 @@ def register():
 # 登录接口
 @auth_bp.route("/api/auth/login", methods=["POST"])
 def login():
+    logger.debug("Received login request")
     data = request.get_json()
     
     # 验证必填参数
@@ -148,12 +155,15 @@ def login():
         
     username = data.get('username')
     password = data.get('password')
+    logger.debug(f"Logging try: user: {username}, password:{password}")
     
     # 查询用户
     user = User.find_by_username(username)
-    
+
+
     # 区分错误类型
     if not user:
+        logger.info(f"User not found: {username}")
         return jsonify({
             "ok": False,
             "error": {
@@ -162,6 +172,7 @@ def login():
             }
         }), 401
     elif not check_password_hash(user['password'], password):  # 验证密码
+        logger.info(f"Invalid password for user: {username}")
         return jsonify({
             "ok": False,
             "error": {

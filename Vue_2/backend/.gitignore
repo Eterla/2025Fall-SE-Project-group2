@@ -3,5 +3,6 @@ instance/
 __pycache__/
 .env
 venv/
-backend/outputs/
+*.db
+outputs/
 .vscode/

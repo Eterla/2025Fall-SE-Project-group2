@@ -42,7 +42,7 @@
 
 <script>
 // 导入axios（必须添加，否则无法发送请求）
-import axios from 'axios'
+import api from '@/axios'
 
 export default {
   data() {

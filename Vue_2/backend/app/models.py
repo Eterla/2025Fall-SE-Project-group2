@@ -1,20 +1,27 @@
 # app/models.py
+import logging
+import hydra
+logger = logging.getLogger(__name__)
+
 import sqlite3
 import datetime
-from flask import g
-from .exceptions import UsernameTakenError  # 从exceptions.py导入异常  <-- 修改这里
+import os
+import uuid
+from flask import g, current_app
+from werkzeug.utils import secure_filename
+from .exceptions import UsernameTakenError
+from app import db
 
 
 class User:
     @staticmethod
     def create(username, password, email, phone):
-        conn = g.db()
+        conn = db.get_db()
         cursor = conn.cursor()
         
         # 检查用户名是否已存在
         cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
         if cursor.fetchone():
-            conn.close()
             raise UsernameTakenError()
         
         # 插入新用户
@@ -30,7 +37,6 @@ class User:
         # 查询新用户信息并返回
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
         user = cursor.fetchone()
-        conn.close()
         
         return {
             "id": user['id'],
@@ -41,11 +47,10 @@ class User:
     
     @staticmethod
     def find_by_username(username):
-        conn = g.db()
+        conn = db.get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
-        conn.close()
         
         if user:
             return {
@@ -60,11 +65,10 @@ class User:
     
     @staticmethod
     def find_by_id(user_id):
-        conn = g.db()
+        conn = db.get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE id = ?", (user_id,)
         ).fetchone()
-        conn.close()
         
         if user:
             return {
@@ -80,36 +84,33 @@ class User:
 class Item:
     @staticmethod
     def publish(user_id, title, description, price, tags, image):
-        conn = get_db_connection()
-        try:
-            image_path = None
-            if image:
-                # 保存图片
-                upload_folder = os.path.join(current_app.root_path, 'static/images')
-                os.makedirs(upload_folder, exist_ok=True)
-                
-                # 生成唯一文件名
-                ext = secure_filename(image.filename).split('.')[-1]
-                filename = f"{uuid.uuid4()}.{ext}"
-                image_path = os.path.join('images', filename)
-                
-                # 保存文件
-                image.save(os.path.join(upload_folder, filename))
+        conn = db.get_db()
+        image_path = None
+        if image:
+            # 保存图片
+            upload_folder = os.path.join(current_app.root_path, 'static/images')
+            os.makedirs(upload_folder, exist_ok=True)
             
-            cursor = conn.cursor()
-            cursor.execute(
-                """INSERT INTO items (seller_id, title, description, price, tags, 
-                   image_path, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (user_id, title, description, price, tags, image_path, 'available', datetime.now())
-            )
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+            # 生成唯一文件名
+            ext = secure_filename(image.filename).split('.')[-1]
+            filename = f"{uuid.uuid4()}.{ext}"
+            image_path = os.path.join('images', filename)
+            
+            # 保存文件
+            image.save(os.path.join(upload_folder, filename))
+        
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO items (seller_id, title, description, price, tags, 
+               image_path, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, title, description, price, tags, image_path, 'available', datetime.datetime.now())
+        )
+        conn.commit()
+        return cursor.lastrowid
     
     @staticmethod
     def search_available(query=''):
-        conn = get_db_connection()
+        conn = db.get_db()
         if query:
             items = conn.execute(
                 """SELECT items.*, users.username as seller_name 
@@ -144,12 +145,12 @@ class Item:
                 'updated_at': item['updated_at']
             })
         
-        conn.close()
         return result
     
     @staticmethod
     def find_by_id(item_id):
-        conn = get_db_connection()
+
+        conn = db.get_db()
         item = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM items JOIN users ON items.seller_id = users.id 
@@ -158,10 +159,9 @@ class Item:
         ).fetchone()
         
         if not item:
-            conn.close()
             return None
         
-        result = {
+        return {
             'id': item['id'],
             'seller_id': item['seller_id'],
             'seller_name': item['seller_name'],
@@ -174,18 +174,15 @@ class Item:
             'created_at': item['created_at'],
             'updated_at': item['updated_at']
         }
-        
-        conn.close()
-        return result
     
     @staticmethod
     def find_by_user(user_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         items = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM items JOIN users ON items.seller_id = users.id 
                WHERE items.seller_id = ?
-               ORDER BY itemsitems.created_at DESC""",
+               ORDER BY items.created_at DESC""",
             (user_id,)
         ).fetchall()
         
@@ -205,57 +202,49 @@ class Item:
                 'updated_at': item['updated_at']
             })
         
-        conn.close()
         return result
     
     @staticmethod
     def update_status(item_id, status):
-        conn = get_db_connection()
+        conn = db.get_db()
         try:
             conn.execute(
                 "UPDATE items SET status = ?, updated_at = ? WHERE id = ?",
-                (status, datetime.now(), item_id)
+                (status, datetime.datetime.now(), item_id)
             )
             conn.commit()
             return True
         except:
             return False
-        finally:
-            conn.close()
 
 class Favorite:
     @staticmethod
     def add(user_id, item_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         try:
             conn.execute(
                 "INSERT INTO favorites (user_id, item_id, created_at) VALUES (?, ?, ?)",
-                (user_id, item_id, datetime.now())
+                (user_id, item_id, datetime.datetime.now())
             )
             conn.commit()
             return True
         except sqlite3.IntegrityError:
             # 已经收藏过
             return False
-        finally:
-            conn.close()
     
     @staticmethod
     def remove(user_id, item_id):
-        conn = get_db_connection()
-        try:
-            conn.execute(
-                "DELETE FROM favorites WHERE user_id = ? AND item_id = ?",
-                (user_id, item_id)
-            )
-            conn.commit()
-            return True
-        finally:
-            conn.close()
+        conn = db.get_db()
+        conn.execute(
+            "DELETE FROM favorites WHERE user_id = ? AND item_id = ?",
+            (user_id, item_id)
+        )
+        conn.commit()
+        return True
     
     @staticmethod
     def get_user_favorites(user_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         favorites = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM favorites 
@@ -282,38 +271,33 @@ class Favorite:
                 'updated_at': item['updated_at']
             })
         
-        conn.close()
         return result
     
     @staticmethod
     def is_favorite(user_id, item_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         favorite = conn.execute(
             "SELECT * from favorites where user_id = ? and item_id = ?",
             (user_id, item_id)
         ).fetchone()
-        conn.close()
         return favorite is not None
 
 class Message:
     @staticmethod
     def send(from_user_id, to_user_id, item_id, content):
-        conn = get_db_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """INSERT INTO messages (from_user_id, to_user_id, item_id, content, 
-                   is_read, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
-                (from_user_id, to_user_id, item_id, content, False, datetime.now())
-            )
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO messages (from_user_id, to_user_id, item_id, content, 
+               is_read, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
+            (from_user_id, to_user_id, item_id, content, False, datetime.datetime.now())
+        )
+        conn.commit()
+        return cursor.lastrowid
     
     @staticmethod
     def get_conversation(user_id, other_user_id, item_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         messages = conn.execute(
             """SELECT messages.*, 
                u1.username as from_username, 
@@ -351,12 +335,11 @@ class Message:
                 'to_username': msg['to_username']
             })
         
-        conn.close()
         return result
     
     @staticmethod
     def get_conversations(user_id):
-        conn = get_db_connection()
+        conn = db.get_db()
         conversations = conn.execute(
             """SELECT DISTINCT 
                CASE WHEN from_user_id = ? THEN to_user_id ELSE from_user_id END as other_user_id,
@@ -389,5 +372,4 @@ class Message:
                 'unread_count': conv['unread_count']
             })
         
-        conn.close()
         return result

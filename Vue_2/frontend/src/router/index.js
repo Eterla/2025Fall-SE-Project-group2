@@ -32,18 +32,6 @@ const routes = [
   { path: '/chat/:otherUserId/:itemId', name: 'ChatDetail', component: ChatDetail, beforeEnter: requireAuth }
 ];
 
-// const routes = [
-//   { path: '/', name: 'Home', component: Home },
-//   { path: '/login', name: 'Login', component: Login },
-//   { path: '/register', name: 'Register', component: Register },
-//   { path: '/item/:id', name: 'ItemDetail', component: ItemDetail },
-//   { path: '/publish', name: 'Publish', component: Publish },
-//   { path: '/user-center', name: 'UserCenter', component: UserCenter },
-//   { path: '/favorites', name: 'Favorites', component: Favorites },
-//   { path: '/messages', name: 'Messages', component: Messages },
-//   { path: '/chat/:otherUserId/:itemId', name: 'ChatDetail', component: ChatDetail }
-// ];
-
 const router = createRouter({
   history: createWebHistory(),
   routes

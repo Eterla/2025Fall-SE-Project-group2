@@ -10,6 +10,18 @@ def make_response_ok(data=None, status_code=200):
         return ("", 204)
     return jsonify({"ok": True, "data": data}), status_code
 
+# send api info 
+def make_response_api():
+    api_info = {
+        "version": "1.0.0",
+        "endpoints": [
+            {"path": "/", "methods": ["GET"], "description": "API home"},
+            {"path": "/items", "methods": ["GET", "POST"], "description": "Get or create items"},
+            {"path": "/items/<id>", "methods": ["GET", "PUT", "DELETE"], "description": "Get, update, or delete an item by ID"}
+        ]
+    }
+    return jsonify({"ok": True, "api": api_info}), 200
+
 # 发送错误响应
 # 格式: { "ok": false, "error": { "code": ..., "message": ..., "details": ... } }
 def error_response(code, message, details=None, status_code=400):

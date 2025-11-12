@@ -1,0 +1,16 @@
+hydra:
+  job_logging:
+    name: backend_log
+    handlers:
+      console:
+        class: logging.StreamHandler
+        formatter: simple
+        level: WARNING
+        stream: ext://sys.stdout
+
+      file:
+        class: logging.FileHandler
+        formatter: simple
+        level: DEBUG
+        filename: ${hydra.runtime.output_dir}/${hydra.job_logging.name}.log
+        

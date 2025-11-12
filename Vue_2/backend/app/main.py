@@ -1,12 +1,22 @@
+import logging
+logger = logging.getLogger(__name__)
+import os
+
 from flask import Blueprint, request, jsonify, session, current_app
 from .auth import token_required  # 修改为新的装饰器
 from .models import Item, Favorite, Message, User
-import os
 from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
 
+from utils import make_response_ok, error_response, make_response_api
 main_bp = Blueprint("main", __name__)
+
+
+@main_bp.route("/")
+def home():
+    # return api info
+    return make_response_ok({"message": "Welcome to the Marketplace API: Backend is running."})
 
 # 修改：首页商品列表API
 @main_bp.route("/api/items")

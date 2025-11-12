@@ -1,0 +1,5 @@
+[2025-11-12 21:23:52,674][app][INFO] - 数据库管理器初始化完成
+[2025-11-12 21:23:52,685][app][INFO] - Flask应用创建完成
+[2025-11-12 21:23:52,685][__main__][INFO] - 数据库文件已存在: /Users/weizhiyuan/z_workarea/Study/PKU5/software_engineering/classproject/2025Fall-SE-Project-group2/Vue_2/backend/instance/market.db
+[2025-11-12 21:23:52,688][__main__][INFO] - 数据库连接成功，现有表: ['sqlite_sequence', 'users', 'items', 'favorites', 'messages']
+[2025-11-12 21:23:52,688][__main__][INFO] - 启动Flask应用...

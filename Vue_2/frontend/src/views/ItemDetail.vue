@@ -47,12 +47,12 @@
         <div class="card mb-4">
           <div class="card-body">
             <h5 class="card-title">卖家信息</h5>
-            <p class="card-text">用户名：{{ item.seller.username }}</p>
+            <p class="card-text">用户名：{{ item.seller_name }}</p>
             <!-- 登录后显示聊天按钮 -->
             <button 
               class="btn btn-primary me-2" 
               @click="goToChat"
-              v-if="isLogin && item.seller.id !== currentUserId"
+              v-if="isLogin && item.seller_id !== currentUserId"
             >
               联系卖家
             </button>
@@ -159,7 +159,7 @@ export default {
       this.$router.push({
         name: 'ChatDetail',
         params: {
-          otherUserId: this.item.seller.id,
+          otherUserId: this.item.seller_id,
           itemId: this.item.id
         }
       });

@@ -21,7 +21,9 @@ def home():
 # 修改：首页商品列表API
 @main_bp.route("/api/items")
 def index():
+    # q 
     q = request.args.get("search", "")
+
     items = Item.search_available(q)
     return jsonify({
         "ok": True,
@@ -66,7 +68,6 @@ def publish():
 # 修改：商品详情API
 @main_bp.route("/api/items/<int:item_id>")
 def item_detail(item_id):
-    logger.warning(f"Received request for item ID: {item_id}")
     logger.debug(f"Successfully received request for item ID: {item_id}")
     item = Item.find_by_id(item_id)
     if not item:
@@ -80,6 +81,7 @@ def item_detail(item_id):
         
     # 检查是否已收藏
     is_favorite = False
+
     if 'user_id' in session:
         is_favorite = Favorite.is_favorite(session['user_id'], item_id)
     
@@ -159,10 +161,12 @@ def update_item_status(item_id):
 @main_bp.route("/api/favorites", methods=["POST"])
 @token_required
 def add_favorite():
+    logger.debug("add_favorite is invoked")
     data = request.get_json()
     item_id = data.get('item_id')
     
     if not item_id:
+        logger.warning("item_id is missing in request")
         return jsonify({
             "ok": False,
             "error": {
@@ -174,6 +178,7 @@ def add_favorite():
     # 检查商品是否存在
     item = Item.find_by_id(item_id)
     if not item:
+        logger.warning(f"Item not found: {item_id}")
         return jsonify({
             "ok": False,
             "error": {
@@ -181,7 +186,7 @@ def add_favorite():
                 "message": "商品不存在"
             }
         }), 404
-    
+    logger.debug(f"Item found: {item_id}, proceeding to add favorite")
     success = Favorite.add(session['user_id'], item_id)
     return jsonify({
         "ok": True,
@@ -214,6 +219,13 @@ def get_favorites():
         "data": favorites
     })
 
+# ADD:(wzy) Check favorite status API
+@main_bp.route("/api/favorites/check", methods=["GET"])
+def check_favorite_status():
+
+    return jsonify({
+
+    })
 # 新增：发送消息
 @main_bp.route("/api/messages", methods=["POST"])
 @token_required

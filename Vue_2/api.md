@@ -299,6 +299,21 @@
   - 401 Unauthorized: 未认证
   - 404 Not Found: 收藏不存在
 
+### 检查收藏状态
+- URL: `/favorites/check?item_id={integer}`
+- Method: `GET`
+- 认证: 需要
+- 成功响应 (200 OK):
+  ```json
+  {
+    "ok": true,
+    "data":{
+      // TODO: the frontend students should finish it and sync info to backend
+      
+    }
+  }
+  ```
+
 ### 获取收藏列表
 - URL: `/favorites`
 - 方法: `GET`

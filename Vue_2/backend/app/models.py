@@ -112,18 +112,20 @@ class Item:
     def search_available(query=''):
         conn = db.get_db()
         if query:
+            logger.debug(f'query is required: {query}')
             items = conn.execute(
-                """SELECT items.*, users.username as seller_name 
-                   FROM items JOIN users ON items.seller_id = users.id 
+                """SELECT items.*
+                   FORM items
                    WHERE items.status = 'available' AND 
                    (items.title LIKE ? OR items.description LIKE ? OR items.tags LIKE ?)
                    ORDER BY items.created_at DESC""",
                 (f'%{query}%', f'%{query}%', f'%{query}%')
             ).fetchall()
         else:
+            logger.debug('no query provided')
             items = conn.execute(
-                """SELECT items.*, users.username as seller_name 
-                   FROM items JOIN users ON items.seller_id = users.id 
+                """SELECT items.*
+                   FROM items
                    WHERE items.status = 'available'
                    ORDER BY items.created_at DESC"""
             ).fetchall()
@@ -144,7 +146,7 @@ class Item:
                 'created_at': item['created_at'],
                 'updated_at': item['updated_at']
             })
-        
+        logger.debug(f"Search available items with query '{query}': found {len(result)} items")
         return result
     
     @staticmethod
@@ -165,8 +167,8 @@ class Item:
 
         logger.debug(f"Finding item by ID: {item_id}")
         item = conn.execute(
-            """SELECT items.*, users.username as seller_name 
-               FROM items JOIN users ON items.seller_id = users.id 
+            """SELECT items.*
+               FROM items
                WHERE items.id = ?""",
             (item_id,)
         ).fetchone()
@@ -234,6 +236,7 @@ class Favorite:
     @staticmethod
     def add(user_id, item_id):
         conn = db.get_db()
+        logger.debug(f"Favorite Class: Adding favorite: user_id={user_id}, item_id={item_id}")
         try:
             conn.execute(
                 "INSERT INTO favorites (user_id, item_id, created_at) VALUES (?, ?, ?)",

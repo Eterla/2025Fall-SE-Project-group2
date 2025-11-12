@@ -1,5 +1,9 @@
 instance/
-*.pyc
 __pycache__/
+app/__pycache__
 .env
 venv/
+*.db
+*.sqlite3
+*.pyc
+.DS_Store

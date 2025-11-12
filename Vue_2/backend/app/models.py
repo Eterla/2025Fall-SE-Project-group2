@@ -1,53 +1,63 @@
 # app/models.py
 import sqlite3
-import datetime
-from flask import g
+from datetime import datetime
+from flask import current_app, g
 from .exceptions import UsernameTakenError  # 从exceptions.py导入异常  <-- 修改这里
 
+def get_db():
+    """获取数据库连接"""
+    if 'db' not in g:
+        g.db = sqlite3.connect(
+            current_app.config['DATABASE'],
+            detect_types=sqlite3.PARSE_DECLTYPES
+        )
+        g.db.row_factory = sqlite3.Row
+    return g.db
 
 class User:
     @staticmethod
-    def create(username, password, email, phone):
-        conn = g.db()
-        cursor = conn.cursor()
+    def create(username, password, email='', phone=''):
+        db = get_db()
         
+        print(f"Creating user: {username}, {email}, {phone}")  # 调试输出
         # 检查用户名是否已存在
-        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        cursor = db.execute("SELECT id FROM users WHERE username = ?", (username,))
         if cursor.fetchone():
-            conn.close()
             raise UsernameTakenError()
         
         # 插入新用户
-        created_at = datetime.datetime.now()
-        cursor.execute("""
+        created_at = datetime.now()
+        cursor = db.execute("""
             INSERT INTO users (username, password, email, phone, created_at)
             VALUES (?, ?, ?, ?, ?)
         """, (username, password, email, phone, created_at))
         
         user_id = cursor.lastrowid
-        conn.commit()
-        
+        db.commit()
+        print(f"User created with ID: {user_id}")  # 调试输出
         # 查询新用户信息并返回
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        user = cursor.fetchone()
-        conn.close()
+        user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         
         return {
             "id": user['id'],
             "username": user['username'],
             "email": user['email'],
+            "phone": user['phone'],
             "created_at": user['created_at']
         }
     
     @staticmethod
     def find_by_username(username):
-        conn = g.db()
+        conn = get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
         conn.close()
         
+        print(f"查找用户: {username}, 结果: {user}")  # 调试输出
+
         if user:
+            print(f"用户找到: {user['username']}")  # 调试输出
             return {
                 "id": user['id'],
                 "username": user['username'],
@@ -60,7 +70,7 @@ class User:
     
     @staticmethod
     def find_by_id(user_id):
-        conn = g.db()
+        conn = get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE id = ?", (user_id,)
         ).fetchone()
@@ -80,7 +90,7 @@ class User:
 class Item:
     @staticmethod
     def publish(user_id, title, description, price, tags, image):
-        conn = get_db_connection()
+        conn = get_db()
         try:
             image_path = None
             if image:
@@ -102,6 +112,7 @@ class Item:
                    image_path, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (user_id, title, description, price, tags, image_path, 'available', datetime.now())
             )
+            print(f"Published item for user_id {user_id} with title {title}")  # 调试输出
             conn.commit()
             return cursor.lastrowid
         finally:
@@ -109,7 +120,7 @@ class Item:
     
     @staticmethod
     def search_available(query=''):
-        conn = get_db_connection()
+        conn = get_db()
         if query:
             items = conn.execute(
                 """SELECT items.*, users.username as seller_name 
@@ -149,7 +160,7 @@ class Item:
     
     @staticmethod
     def find_by_id(item_id):
-        conn = get_db_connection()
+        conn = get_db()
         item = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM items JOIN users ON items.seller_id = users.id 
@@ -180,12 +191,12 @@ class Item:
     
     @staticmethod
     def find_by_user(user_id):
-        conn = get_db_connection()
+        conn = get_db()
         items = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM items JOIN users ON items.seller_id = users.id 
                WHERE items.seller_id = ?
-               ORDER BY itemsitems.created_at DESC""",
+               ORDER BY items.created_at DESC""",
             (user_id,)
         ).fetchall()
         
@@ -210,7 +221,7 @@ class Item:
     
     @staticmethod
     def update_status(item_id, status):
-        conn = get_db_connection()
+        conn = get_db()
         try:
             conn.execute(
                 "UPDATE items SET status = ?, updated_at = ? WHERE id = ?",
@@ -226,7 +237,7 @@ class Item:
 class Favorite:
     @staticmethod
     def add(user_id, item_id):
-        conn = get_db_connection()
+        conn = get_db()
         try:
             conn.execute(
                 "INSERT INTO favorites (user_id, item_id, created_at) VALUES (?, ?, ?)",
@@ -242,7 +253,7 @@ class Favorite:
     
     @staticmethod
     def remove(user_id, item_id):
-        conn = get_db_connection()
+        conn = get_db()
         try:
             conn.execute(
                 "DELETE FROM favorites WHERE user_id = ? AND item_id = ?",
@@ -255,7 +266,7 @@ class Favorite:
     
     @staticmethod
     def get_user_favorites(user_id):
-        conn = get_db_connection()
+        conn = get_db()
         favorites = conn.execute(
             """SELECT items.*, users.username as seller_name 
                FROM favorites 
@@ -287,7 +298,7 @@ class Favorite:
     
     @staticmethod
     def is_favorite(user_id, item_id):
-        conn = get_db_connection()
+        conn = get_db()
         favorite = conn.execute(
             "SELECT * from favorites where user_id = ? and item_id = ?",
             (user_id, item_id)
@@ -298,7 +309,7 @@ class Favorite:
 class Message:
     @staticmethod
     def send(from_user_id, to_user_id, item_id, content):
-        conn = get_db_connection()
+        conn = get_db()
         try:
             cursor = conn.cursor()
             cursor.execute(
@@ -313,7 +324,7 @@ class Message:
     
     @staticmethod
     def get_conversation(user_id, other_user_id, item_id):
-        conn = get_db_connection()
+        conn = get_db()
         messages = conn.execute(
             """SELECT messages.*, 
                u1.username as from_username, 
@@ -356,7 +367,7 @@ class Message:
     
     @staticmethod
     def get_conversations(user_id):
-        conn = get_db_connection()
+        conn = get_db()
         conversations = conn.execute(
             """SELECT DISTINCT 
                CASE WHEN from_user_id = ? THEN to_user_id ELSE from_user_id END as other_user_id,

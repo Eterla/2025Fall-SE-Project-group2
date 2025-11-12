@@ -33,7 +33,7 @@ def create_app(test_config=None):
         pass
 
     # 启用CORS（解决前后端跨域问题）
-    CORS(app, supports_credentials=True)  # 新增：允许跨域请求携带Cookie
+    CORS(app, origins=["http://localhost:8080"], supports_credentials=True)  # 新增：允许跨域请求携带Cookie
 
     # 数据库连接管理（核心：供全应用使用的数据库连接工具）
     def get_db():

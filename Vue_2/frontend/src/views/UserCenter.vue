@@ -107,7 +107,7 @@ export default {
           this.userInfo = JSON.parse(userInfoStr);
         } else {
           // 如果本地没有，调用接口获取（实际项目中需要后端接口支持）
-          const response = await axios.get('/api/auth/me');
+          const response = await axios.get('/auth/me');
           if (response.ok) {
             this.userInfo = response.data;
             localStorage.setItem('user_info', JSON.stringify(this.userInfo)); // 保存到本地
@@ -123,7 +123,7 @@ export default {
     async getMyItems() {
       try {
         // 调用后端接口获取当前用户发布的商品
-        const response = await axios.get('/api/items/my');
+        const response = await axios.get('/items/my');
         if (response.ok) {
           this.myItems = response.data;
         } else {

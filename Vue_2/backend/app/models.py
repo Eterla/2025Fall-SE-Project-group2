@@ -201,10 +201,11 @@ class Item:
     
     @staticmethod
     def find_by_user(user_id):
+        logger.debug(f"Finding items for user ID: {user_id}")
         conn = db.get_db()
         items = conn.execute(
-            """SELECT items.*, users.username as seller_name 
-               FROM items JOIN users ON items.seller_id = users.id 
+            """SELECT items.*
+               FROM items
                WHERE items.seller_id = ?
                ORDER BY items.created_at DESC""",
             (user_id,)

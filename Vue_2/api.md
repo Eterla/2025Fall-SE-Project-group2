@@ -201,7 +201,7 @@
   - 401 Unauthorized: 未认证
 
 ### 获取用户发布的商品
-- URL: `/user/items`
+- URL: `/items/my`
 - 方法: `GET`
 - 认证: 需要
 - 成功响应 (200 OK):

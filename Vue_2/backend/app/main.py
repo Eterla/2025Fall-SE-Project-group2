@@ -94,9 +94,10 @@ def item_detail(item_id):
     })
 
 # 新增：获取用户发布的商品
-@main_bp.route("/api/user/items")
+@main_bp.route("/api/items/my")
 @token_required
 def user_items():
+    logger.debug(f"Fetching items for user ID: {session['user_id']}")
     items = Item.find_by_user(session['user_id'])
     return jsonify({
         "ok": True,

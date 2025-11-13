@@ -1,10 +1,28 @@
 # 校内二手物品交易平台 API 文档
+> [!tip]
+>
+> 目前的api文档是根据已经实现的frontend和backend响应接口来描述，而后端实际上尚未实现的内容则特殊标注为BNC(Backend Not Completed)
+>
+> **前后端的同学都一定要看api文档!!! **
+>
+> 1. 前端同学在完成前端需求时如果需要修改已有的api，需要向相关的后端同学提出由后端同学进行修改!
+> 2. 前端同学在完成前端需求时，如果是自己新添加的api，则尽量确保新增api的稳定性，避免频繁提出api更改需求，同时应当遵循下述规定的响应基本格式，保证api的统一性.
+> 3. 后端同学应尽量及时处理前端同学对api的修改需求和新增需求; 
+> 4. **关于api开发的Git合作:目前设想的逻辑有两种:**
+>    - 前端同学完成自己的开发之前，如果已经有了对api的需求，可以先跟后端同步，后端即可并行开始; 后面各自pull request到`dev`分支上.
+>    - 前端同学如果开发过程对api的需求不太确定，也可以先等自己把前端逻辑完全开发完了，再通知后端开始修改或新增.
+> 5. 最后所有开发完成之后可以删除掉api文档中多余的注释，publish一个尽量简洁清爽的version
+> 6. (前端同学可以忽略本条)后端同学还需要注意一个事情，目前的后端架构中，只有User, Item...等类，同时这些类并不是个体类，而都是用来封装这些大类中与数据库交互的方法，相当于跳过了更细粒度层的个体item, user这些类的实现, 这是否已经与OOA和OOD模型产生了矛盾?
+> 7. **By the end **目前还有一个问题，img在项目中应该怎么管理?  之前后端的数据库中有一个str类型的img_path, 但是previous version中的实现都是把该项置为Null， 所以可能需要在组会的时候讨论清楚这一个内容以便后续开发
+
+[TOC]
 
 ## 基础信息
 
 - 基础URL: `/api`
 - 所有响应格式: JSON
 - 认证方式: JWT Bearer Token
+- 同时规约好200, 201, 401, 404等状态码
 
 ## 响应格式
 
@@ -58,6 +76,7 @@
 - 错误响应:
   - 400 Bad Request: 请求参数错误
   - 409 Conflict: 用户名已存在
+  - 500: 服务器内部错误，如数据库bug等
 
 ### 登录
 - URL: `/auth/login`
@@ -85,10 +104,13 @@
   }
   ```
 - 错误响应:
-  - 400 Bad Request: 请求参数错误
+  - 400 Bad Request: 请求参数错误(如没填密码等, 前端如果有提交验证的话，则一般不会出现该错误)
   - 401 Unauthorized: 用户名或密码错误
 
 ### 登出
+
+> BCN: 严格来说, 后端有一个demo已经实现在了/auth/logout中，但是时间原因暂时没有检查前端中对logout的api是怎么要求的，同时由于对session机制的陌生, 所以整条环路不确定是否通畅，故而标记为BCN，等待后续同学check完成，为了便利后续检查，下面仍然给出后端demo版本对该api的实现 ----Author: weizhiyuan
+
 - URL: `/auth/logout`
 - 方法: `POST`
 - 认证: 需要
@@ -99,7 +121,10 @@
   }
   ```
 
+- 暂无错误响应实现, 默认都返回ok
+
 ### 获取当前用户信息
+
 - URL: `/auth/me`
 - 方法: `GET`
 - 认证: 需要
@@ -124,10 +149,18 @@
 
 ### 获取商品列表
 - URL: `/items`
+
 - 方法: `GET`
+
 - 查询参数:
   - `search`: 搜索关键词 (可选)
+  
+    > 便于一些不了解的同学理解: 关键词的写法为路径后添加?search=xxx的格式
+  
 - 成功响应 (200 OK):
+  
+  - > Notice: 现在的data json object的内容即为目前数据库中items表的所有列，即如果还需要添加这里的返回值的话，可能会涉及对sqlite数据库的items表的结构性改动，对于后端来说会有大量的work，所以除非万不得已, 尽量使用已有的内容----(:by weizhiyuan)
+  
   ```json
   {
     "ok": true,
@@ -150,7 +183,10 @@
   ```
 
 ### 获取商品详情
-- URL: `/items/{item_id}`
+- URL: `/items/{item_id:int}`
+- > 对{item_id:int}的说明: for example: /items/2 表示向后端提出查找item_id为2的物品, 另外同/items方法, 这里也已经给出了所有的items项...
+  >
+  > 此外data.is_favorite的含义和功能我暂时不是很明确，所以后端目前都是返回False, 前端如果有需求请联系(weizhiyuan)
 - 方法: `GET`
 - 成功响应 (200 OK):
   ```json
@@ -200,7 +236,10 @@
   - 400 Bad Request: 请求参数错误
   - 401 Unauthorized: 未认证
 
-### 获取用户发布的商品
+### 获取用户自己发布的商品
+
+> 返回user_id对应拥有的items, 所以response.data是一个list[item], 内部的单个item还是用json格式来保证一致性
+
 - URL: `/items/my`
 - 方法: `GET`
 - 认证: 需要
@@ -208,7 +247,7 @@
   ```json
   {
     "ok": true,
-    "data": [
+    "data":list[item:json] [
       {
         "id": "integer",
         "seller_id": "integer",
@@ -229,6 +268,9 @@
   - 401 Unauthorized: 未认证
 
 ### 更新商品状态
+
+> **BCN! wait for implement**
+
 - URL: `/items/{item_id}/status`
 - 方法: `PUT`
 - 认证: 需要
@@ -255,6 +297,8 @@
   - 404 Not Found: 商品不存在
 
 ## 收藏相关 API
+
+> **BCN! 同样的，所有的favorite相关的api, 后端里其实有一些demo实现(可能是之前ai生成的) 然而由于时间和精力问题, 都没有被检查和测试, 所以有些api可能是work的，有些则可能是没必要的，这一部分如果需求确实存在的话，可能就是接下来前后端工作的一个主要方面了** -----(weizhiyuan)
 
 ### 添加收藏
 - URL: `/favorites`
@@ -343,6 +387,8 @@
   - 401 Unauthorized: 未认证
 
 ## 消息相关 API
+
+> **BCN**. 目前状况与favorite(收藏)相同, 
 
 ### 发送消息
 - URL: `/messages`

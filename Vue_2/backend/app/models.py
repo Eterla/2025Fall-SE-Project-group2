@@ -185,6 +185,7 @@ class Item:
         if not item:
             return None
         
+        # here is a json object representing the item
         return {
             'id': item['id'],
             'seller_id': item['seller_id'],

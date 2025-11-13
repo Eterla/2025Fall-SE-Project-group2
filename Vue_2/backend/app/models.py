@@ -111,7 +111,7 @@ class Item:
         curr_time = curr_time.strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute(
             """INSERT INTO items (seller_id, seller_name, title, description, price, tags, 
-               image_path, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               image_path, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (user_id, seller_name, title, description, price, tags, image_path, 'available', curr_time, curr_time) 
         )
         conn.commit()

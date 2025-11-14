@@ -376,3 +376,5 @@ instance/
 *.db
 outputs/
 tmp/
+.DS_Store
+.vscode/

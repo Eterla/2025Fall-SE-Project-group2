@@ -77,16 +77,11 @@ cd project/backend
 pip install -r requirements.txt
 ```
 
-3. 初始化数据库：
-```bash
-flask init-db
-```
-
-4. 启动后端服务器：
+3. 启动后端服务器：
 ```bash
 python run.py
 ```
-服务器将在 http://localhost:5000 运行。
+服务器将在 http://localhost:5001 运行。
 
 ### 前端
 

@@ -1,9 +1,0 @@
-instance/
-*.pyc
-__pycache__/
-.env
-venv/
-*.db
-outputs/
-.vscode/
-tmp/

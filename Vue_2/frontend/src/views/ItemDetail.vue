@@ -1,4 +1,3 @@
-
 <template>
   <div class="container">
     <!-- 加载中提示 -->
@@ -90,6 +89,8 @@
 
 <script>
 import axios from '@/axios'
+import dayjs from '@/utils/dayjs-plugins.js'
+console.log('dayjs 是否加载成功:', typeof dayjs === 'function' ? '是' : '否', dayjs)
 
 export default {
   data() {
@@ -122,12 +123,32 @@ async getItemDetail() {
       alert('获取商品失败（无商品数据）');
       return;
     }
+const rawTime = respData.createdAt || respData.created_at;
+let formattedTime = '暂无时间';
+if (rawTime) {
+  try {
+    // 直接按本地时区（北京时间）解析
+    const dayjsObj = dayjs(rawTime);
+    if (dayjsObj.isValid()) {
+      // 格式化成本地时间字符串
+      formattedTime = dayjsObj.format('YYYY-MM-DD HH:mm:ss');
+      console.log('最终显示时间:', formattedTime); // 应该和 rawTime 一致
+    } else {
+      formattedTime = '时间格式无效';
+    }
+  } catch (error) {
+    console.error('时间处理报错:', error);
+    formattedTime = '时间解析失败';
+  }
+}
+
 
     // 规范化字段名（保持原逻辑）
     const normalized = {
       ...respData,
       imagePath: respData.imagePath || respData.image_path || '',
-      createdAt: respData.createdAt || respData.created_at || '',
+      //createdAt: respData.createdAt || respData.created_at || '',
+      createdAt: formattedTime,
       id: respData.id || respData.item_id || respData.itemId || null,
       seller_id: respData.seller_id || respData.sellerId || respData.seller || null,
       seller_name: respData.seller_name || respData.sellerName || '',

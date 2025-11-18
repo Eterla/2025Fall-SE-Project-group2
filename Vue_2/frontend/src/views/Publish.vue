@@ -37,6 +37,54 @@
                 >
               </div>
 
+              <!-- 商品标签 -->
+              <div class="mb-3">
+                <label class="form-label">商品标签</label>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <!-- 已选标签展示 -->
+                  <span 
+                    v-for="(tag, index) in form.tags" 
+                    :key="index" 
+                    class="badge bg-secondary d-flex align-items-center gap-1"
+                  >
+                    {{ tag }}
+                    <button 
+                      type="button" 
+                      class="btn-close btn-close-white btn-sm" 
+                      @click="removeTag(index)"
+                    ></button>
+                  </span>
+                </div>
+                <div class="d-flex gap-2">
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    v-model="newTag" 
+                    placeholder="输入标签后按回车添加"
+                    @keyup.enter="addTag"
+                  >
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary"
+                    @click="addTag"
+                  >
+                    添加标签
+                  </button>
+                </div>
+                <div class="mt-2 text-muted">
+                  <small>常用标签：
+                    <span 
+                      class="badge bg-light text-dark me-1 cursor-pointer"
+                      @click="addTagFromCommon(tag)"
+                      v-for="tag in commonTags" 
+                      :key="tag"
+                    >
+                      {{ tag }}
+                    </span>
+                  </small>
+                </div>
+              </div>
+
               <!-- 商品描述 -->
               <div class="mb-3">
                 <label for="description" class="form-label">商品描述 <span class="text-danger">*</span></label>
@@ -94,8 +142,11 @@ export default {
         title: '',        // 商品标题
         price: '',        // 商品价格
         description: '',  // 商品描述
-        image: null       // 图片文件（不直接绑定v-model，通过change事件处理）
+        image: null,      // 图片文件
+        tags: []          // 商品标签数组
       },
+      newTag: '',        // 新标签输入框
+      commonTags: ['二手', '教材', '电子产品', '书籍', '生活用品', '全新', '九成新'], // 常用标签
       imagePreview: '',  // 图片预览地址
       submitting: false  // 提交状态（防止重复提交）
     }
@@ -124,6 +175,32 @@ export default {
       this.form.image = file;
     },
 
+    // 添加标签
+    addTag() {
+      if (!this.newTag.trim()) return;
+      
+      // 防止重复添加
+      if (this.form.tags.includes(this.newTag.trim())) {
+        this.newTag = '';
+        return;
+      }
+      
+      this.form.tags.push(this.newTag.trim());
+      this.newTag = '';
+    },
+
+    // 从常用标签添加
+    addTagFromCommon(tag) {
+      if (!this.form.tags.includes(tag)) {
+        this.form.tags.push(tag);
+      }
+    },
+
+    // 移除标签
+    removeTag(index) {
+      this.form.tags.splice(index, 1);
+    },
+
     // 提交发布商品
     async handlePublish() {
       // 简单验证
@@ -148,14 +225,20 @@ export default {
         formData.append('title', this.form.title);
         formData.append('price', this.form.price);
         formData.append('description', this.form.description);
+        
+        // 添加标签（用空格分隔）
+        if (this.form.tags.length > 0) {
+          formData.append('tags', this.form.tags.join(' '));
+        }
+        
         if (this.form.image) {
           formData.append('image', this.form.image); // 图片文件
         }
 
-        // 调用后端发布商品接口（暂时模拟，后续替换为真实请求）
+        // 调用后端发布商品接口
         const response = await axios.post('/items', formData, {
           headers: {
-            'Content-Type': 'multipart/form-data' // 上传文件必须的头信息
+            'Content-Type': 'multipart/form-data'
           }
         });
 

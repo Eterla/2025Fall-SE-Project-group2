@@ -394,7 +394,9 @@
 ==**Important!!! 因为添加了SocketIO, 因此其实有一套另外的"api"系统, 而api文档中其他的api其实都是REST api; 所以后面可能会把SocketIO有关的内容单独封装到一个新的api文档中?**==
 
 - 为了实现实时消息, 添加了这一项, 不过其使用方法略微与其他api有区别，故而专门在此处标注出来;
+
 - 前端重新运行一次`npm install`即可, 因为需要装一个socket.io-client的包依赖
+
 - 逻辑简述:
   - 前端在login的时候需要添加一个websocket的连接请求，表示登陆成功之后就利用得到的token向后端发起一个websocket的连接:
   ```js
@@ -415,7 +417,24 @@
     }
   }
   ```
-  - 同样的logout的时候也要调用`socketService.disconnect`, 其实这里so
+  - 同样的logout的时候也要调用`socketService.disconnect`,
+  
+    ```js
+    // 在 Logout 或 UserCenter 组件中
+    methods: {
+      handleLogout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_info');
+        
+        // 断开 WebSocket 连接
+        socketService.disconnect();
+        
+        this.$router.push('/login');
+      }
+    }
+    ```
+  
+    
 ### 发送消息
 
 - URL: `/messages`

@@ -5,7 +5,9 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from .boya_database import BoyaDatabase
+
 db = BoyaDatabase()
+
 def create_app(test_config=None):
     
     app = Flask(__name__, instance_relative_config=True)
@@ -44,9 +46,11 @@ def create_app(test_config=None):
     # 注册蓝图
     from .auth import auth_bp
     from .main import main_bp
+    from .chat import chat_bp
+    
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
-
-    logger.info("Flask应用创建完成")
+    app.register_blueprint(chat_bp)
+    logger.info("Flask应用创建完成（已注册 auth, main, chat 蓝图）")
     
     return app

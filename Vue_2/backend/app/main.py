@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, request, jsonify, session, current_app
 from .auth import token_required  # 修改为新的装饰器
-from .models import Item, Favorite, Message, User
+from .models import Item, Favorite, User
 from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
@@ -222,91 +222,41 @@ def get_favorites():
 
 # ADD:Check favorite status API
 @main_bp.route("/api/favorites/check", methods=["GET"])
-def check_favorite_status():
-    # TODO: implement this API
-    return jsonify({
-
-    })
-# 新增：发送消息
-@main_bp.route("/api/messages", methods=["POST"])
 @token_required
-def send_message():
-    data = request.get_json()
-    to_user_id = data.get('to_user_id')
-    item_id = data.get('item_id')
-    content = data.get('content')
+def check_favorite_status():
+    item_id = request.args.get('item_id')
     
-    if not to_user_id or not item_id or not content:
+    if not item_id:
         return jsonify({
             "ok": False,
             "error": {
                 "code": "INVALID_INPUT",
-                "message": "接收用户ID、商品ID和消息内容不能为空"
+                "message": "商品ID不能为空"
             }
         }), 400
     
-    # 检查接收用户是否存在
-    user = User.find_by_id(to_user_id)
-    if not user:
+    try:
+        item_id = int(item_id)
+    except ValueError:
         return jsonify({
             "ok": False,
             "error": {
-                "code": "USER_NOT_FOUND",
-                "message": "接收用户不存在"
+                "code": "INVALID_INPUT",
+                "message": "商品ID格式错误"
             }
-        }), 404
+        }), 400
     
-    # 检查商品是否存在
-    item = Item.find_by_id(item_id)
-    if not item:
-        return jsonify({
-            "ok": False,
-            "error": {
-                "code": "ITEM_NOT_FOUND",
-                "message": "商品不存在"
-            }
-        }), 404
+    is_favorite = Favorite.is_favorite(session['user_id'], item_id)
     
-    message_id = Message.send(session['user_id'], to_user_id, item_id, content)
     return jsonify({
         "ok": True,
         "data": {
-            "id": message_id,
-            "from_user_id": session['user_id'],
-            "to_user_id": to_user_id,
-            "item_id": item_id,
-            "content": content,
-            "created_at": datetime.now().isoformat()
+            "is_favorite": is_favorite,
+            "item_id": item_id
         }
-    }), 201
-
-# 新增：获取消息列表
-@main_bp.route("/api/messages/conversations")
-@token_required
-def get_conversations():
-    conversations = Message.get_conversations(session['user_id'])
-    return jsonify({
-        "ok": True,
-        "data": conversations
     })
 
-# 新增：获取聊天记录
-@main_bp.route("/api/messages/conversations/<int:other_user_id>/<int:item_id>")
-@token_required
-def get_chat_history(other_user_id, item_id):
-    # 检查商品是否存在
-    item = Item.find_by_id(item_id)
-    if not item:
-        return jsonify({
-            "ok": False,
-            "error": {
-                "code": "ITEM_NOT_FOUND",
-                "message": "商品不存在"
-            }
-        }), 404
-    
-    messages = Message.get_conversation(session['user_id'], other_user_id, item_id)
-    return jsonify({
-        "ok": True,
-        "data": messages
-    })
+# 注意：所有聊天相关的路由已移至 chat.py 蓝图---wzy(下一版本将删除此注释, )---
+# - POST /api/messages (发送消息)
+# - GET /api/messages/conversations (获取会话列表)
+# - GET /api/messages/conversations/<other_user_id>/<item_id> (获取聊天记录)

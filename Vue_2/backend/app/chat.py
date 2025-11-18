@@ -14,7 +14,7 @@ chat_bp = Blueprint("chat", __name__)
 # 存储用户socket连接映射 {user_id: sid}
 user_sockets = {}
 
-
+# 如果后续发现该验证也被其他地方需要使用，可以考虑移到main.py的blueprint外部或者utils.py中
 def verify_socket_token(token):
     """验证Socket连接的JWT token并返回user_id"""
     try:
@@ -115,7 +115,7 @@ def register_socketio_events(socketio):
             }, room=room, skip_sid=request.sid)
 
 
-# ============= HTTP REST API =============
+# ----- HTTP API -----
 
 @chat_bp.route("/api/messages", methods=["POST"])
 @token_required
@@ -230,7 +230,7 @@ def get_conversations():
         return jsonify({
             "ok": True,
             "data": conversations
-        })
+        }), 200
     except Exception as e:
         logger.exception("获取会话列表失败")
         return jsonify({

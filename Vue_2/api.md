@@ -388,9 +388,36 @@
 
 ## 消息相关 API
 
-> **BCN**. 目前状况与favorite(收藏)相同, 
+> 使用SocketIO实现实时通信，下面描述SocketIO的接口和HTTP的api
 
+### SocketIO
+==**Important!!! 因为添加了SocketIO, 因此其实有一套另外的"api"系统, 而api文档中其他的api其实都是REST api; 所以后面可能会把SocketIO有关的内容单独封装到一个新的api文档中?**==
+
+- 为了实现实时消息, 添加了这一项, 不过其使用方法略微与其他api有区别，故而专门在此处标注出来;
+- 前端重新运行一次`npm install`即可, 因为需要装一个socket.io-client的包依赖
+- 逻辑简述:
+  - 前端在login的时候需要添加一个websocket的连接请求，表示登陆成功之后就利用得到的token向后端发起一个websocket的连接:
+  ```js
+  import socketService from '@/socket';
+  export default {
+    methods: {
+      async handleLogin() {
+        // ... 登录逻辑 ... 
+        // 登陆成功后应该会获得一个response，内含access_token, [可以参考api的login part]
+        if (response.data.ok) {
+          const token = response.data.access_token;
+          localStorage.setItem('access_token', token);
+          // 连接 WebSocket
+          socketService.connect(token);
+          this.$router.push('/');
+        }
+      }
+    }
+  }
+  ```
+  - 同样的logout的时候也要调用`socketService.disconnect`, 其实这里so
 ### 发送消息
+
 - URL: `/messages`
 - 方法: `POST`
 - 认证: 需要
@@ -421,7 +448,7 @@
   - 401 Unauthorized: 未认证
   - 404 Not Found: 用户或商品不存在
 
-### 获取消息列表
+### 获取会话列表
 - URL: `/messages/conversations`
 - 方法: `GET`
 - 认证: 需要
@@ -431,12 +458,14 @@
     "ok": true,
     "data": [
       {
+        "conversation_id": "integer",
         "other_user_id": "integer",
         "other_username": "string",
         "item_id": "integer",
         "item_title": "string",
         "item_image": "string",
-        "last_message_time": "string",
+        "last_message_time": "string",    // 最新一条消息的时间
+        "last_message_content": "string", // 最新一条消息的内容
         "unread_count": "integer"
       }
     ]
@@ -444,6 +473,7 @@
   ```
 - 错误响应:
   - 401 Unauthorized: 未认证
+  - 500 Server's internal error: 服务器内部错误
 
 ### 获取聊天记录
 - URL: `/messages/conversations/{other_user_id}/{item_id}`
@@ -456,18 +486,20 @@
     "data": [
       {
         "id": "integer",
-        "from_user_id": "integer",
-        "to_user_id": "integer",
+        "conversation_id": "integer",
+        "from_user_id": "integer",    //发送方id
+        "to_user_id": "integer",      //接受方id
         "item_id": "integer",
         "content": "string",
         "is_read": "boolean",
         "created_at": "string",
-        "from_username": "string",
-        "to_username": "string"
+        "from_username": "string",    //发送方name
+        "to_username": "string"       //接收方name
       }
     ]
   }
   ```
 - 错误响应:
   - 401 Unauthorized: 未认证
-  - 404 Not Found: 商品不存在
+  - 404 Not Found: 商品不存在, 用户不存在
+  - 500 服务器内部错误

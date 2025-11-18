@@ -40,6 +40,20 @@
             <p class="card-text">
               <small class="text-muted">状态：{{ item.status === 'available' ? '可交易' : '已售出' }}</small>
             </p>
+
+            <!-- 标签展示：使用 item.tags（getItemDetail 已规范化为数组） -->
+            <div v-if="item.tags && item.tags.length" class="mt-3">
+              <h6 class="mb-2">标签</h6>
+              <div>
+                <span 
+                  v-for="(tag, idx) in item.tags" 
+                  :key="idx" 
+                  class="badge bg-secondary me-1"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -75,6 +89,8 @@
 
 <script>
 import axios from '@/axios'
+import dayjs from '@/utils/dayjs-plugins.js'
+console.log('dayjs 是否加载成功:', typeof dayjs === 'function' ? '是' : '否', dayjs)
 
 export default {
   data() {
@@ -93,25 +109,67 @@ export default {
     this.checkLoginStatus();
   },
   methods: {
-    // 获取商品详情
-    async getItemDetail() {
-      const itemId = this.$route.params.id; // 从路由参数中获取商品ID
-      try {
-        const response = await axios.get(`/items/${itemId}`);
-        if (response.ok) {
-          this.item = response.data;
-          // 检查是否已收藏
-          this.checkFavoriteStatus();
-        } else {
-          alert(response.data.message || '获取商品失败');
-        }
-      } catch (error) {
-        console.error('获取商品详情失败:', error);
-        alert('网络错误，请稍后再试');
-      } finally {
-        this.loading = false;
-      }
-    },
+async getItemDetail() {
+  const itemId = this.$route.params.id;
+  try {
+    const response = await axios.get(`/items/${itemId}`);
+    console.log('getItemDetail response:', response);
+
+    // 直接使用响应数据（后端直接返回商品对象）
+    const respData = response.data;
+
+    if (!respData) {
+      console.warn('响应数据为空');
+      alert('获取商品失败（无商品数据）');
+      return;
+    }
+const rawTime = respData.createdAt || respData.created_at;
+let formattedTime = '暂无时间';
+if (rawTime) {
+  try {
+    // 直接按本地时区（北京时间）解析
+    const dayjsObj = dayjs(rawTime);
+    if (dayjsObj.isValid()) {
+      // 格式化成本地时间字符串
+      formattedTime = dayjsObj.format('YYYY-MM-DD HH:mm:ss');
+      console.log('最终显示时间:', formattedTime); // 应该和 rawTime 一致
+    } else {
+      formattedTime = '时间格式无效';
+    }
+  } catch (error) {
+    console.error('时间处理报错:', error);
+    formattedTime = '时间解析失败';
+  }
+}
+
+
+    // 规范化字段名（保持原逻辑）
+    const normalized = {
+      ...respData,
+      imagePath: respData.imagePath || respData.image_path || '',
+      //createdAt: respData.createdAt || respData.created_at || '',
+      createdAt: formattedTime,
+      id: respData.id || respData.item_id || respData.itemId || null,
+      seller_id: respData.seller_id || respData.sellerId || respData.seller || null,
+      seller_name: respData.seller_name || respData.sellerName || '',
+      tags: Array.isArray(respData.tags)
+        ? respData.tags
+        : (typeof respData.tags === 'string' ? respData.tags.split(/[\s,;，,]+/).map(s => s.trim()).filter(Boolean) : [])
+    };
+
+    this.item = normalized;
+    // 直接从响应数据中获取收藏状态
+    this.isFavorite = !!respData.is_favorite || !!respData.isFavorite;
+
+    console.log('解析后的 item:', this.item, 'isFavorite:', this.isFavorite);
+  } catch (error) {
+    console.error('获取商品详情失败:', error);
+    alert('网络错误或解析错误，请查看控制台详情');
+  } finally {
+    this.loading = false;
+  }
+},
+//更改
 
     // 检查登录状态
     checkLoginStatus() {

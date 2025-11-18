@@ -4,9 +4,11 @@ logger = logging.getLogger(__name__)
 import os
 from flask import Flask
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from .boya_database import BoyaDatabase
 
 db = BoyaDatabase()
+socketio = SocketIO()
 
 def create_app(test_config=None):
     
@@ -37,7 +39,11 @@ def create_app(test_config=None):
         pass
 
     # 启用CORS
-    CORS(app, supports_credentials=True)
+    CORS(app, supports_credentials=True, origins="*")
+
+    # Init SocketIO（支持跨域）
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    logger.info("SocketIO初始化完成")
 
     # 初始化数据库
     db.init_app(app)

@@ -9,6 +9,7 @@ import UserCenter from '../views/UserCenter.vue';
 import Favorites from '../views/Favorites.vue';
 import Messages from '../views/Messages.vue';
 import ChatDetail from '../views/ChatDetail.vue';
+import Logout from '../views/Logout.vue';
 
 // 保留登录守卫逻辑
 const requireAuth = (to, from, next) => {
@@ -23,6 +24,7 @@ const requireAuth = (to, from, next) => {
 const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
+  { path: '/logout', name: 'Logout', component: Logout },
   { path: '/register', name: 'Register', component: Register },
   { path: '/item/:id', name: 'ItemDetail', component: ItemDetail },
   { path: '/publish', name: 'Publish', component: Publish, beforeEnter: requireAuth },

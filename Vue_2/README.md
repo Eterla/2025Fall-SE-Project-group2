@@ -3,7 +3,7 @@
 这是一个基于Flask和Vue的校内二手物品交易平台，实现了前后端分离的架构。
 
 ## 项目结构
-
+仅供参考
 ```
 project/
 ├── backend/                  # Flask后端
@@ -64,12 +64,12 @@ project/
 - Bootstrap：UI框架
 
 ## 如何运行
-
+(建议在cmd)
 ### 后端
 
 1. 进入backend目录：
 ```bash
-cd project/backend
+cd Vue_2/backend 
 ```
 
 2. 安装依赖：
@@ -81,13 +81,13 @@ pip install -r requirements.txt
 ```bash
 python run.py
 ```
-服务器将在 http://localhost:5001 运行。
+服务器将在 http://localhost:5001 运行。 #变成了5001 为了确保正确 可以从终端输出看到端口号
 
 ### 前端
 
 1. 进入frontend目录：
 ```bash
-cd project/frontend
+cd Vue_2/frontend 
 ```
 
 2. 安装依赖：
@@ -104,6 +104,7 @@ npm run serve
 ## API文档
 
 API文档位于 `api.md` 文件中，包含了所有API接口的详细说明。
+**注意！请无论前端还是后端的开发成员都阅读api.md**
 
 ## 注意事项
 

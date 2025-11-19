@@ -4,10 +4,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
+import re
+
 from omegaconf import DictConfig
 
-from app import create_app, db, socketio
 
+from app import create_app, db, socketio
+from app.chat import register_socketio_events
 def init_db(app):
     """初始化数据库，创建所有必要的表"""
     # 确保实例文件夹存在
@@ -49,13 +52,56 @@ def main(cfg: DictConfig):
     logger.info("Starting Boya Market Backend with SocketIO support...")
     logger.info(f"Configuration: {cfg}")
     
-    # 导入app和socketio
-    from app import create_app, socketio
-    from app.chat import register_socketio_events
+
+
     
+    # Init Database
+
     # 创建Flask应用
     app = create_app()
     
+    # Init database(use instance/market.db), if not exist or not correct according to schema.sql, recreate it
+    # Init database(use instance/market.db), if not exist or not correct according to schema.sql, recreate it
+    db_path = app.config.get('DATABASE')
+    logger.info(f"Checking database at: {db_path}")
+
+    need_init = False
+    if not db_path or not os.path.exists(db_path):
+        logger.info("Database file missing -> will initialize.")
+        need_init = True
+    else:
+        try:
+            schema_path = 'app/schema.sql'
+            with open(schema_path, 'r', encoding='utf-8') as f:
+                schema = f.read()
+            # extract table names from CREATE TABLE statements
+            table_names = re.findall(r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`]?([A-Za-z0-9_]+)["`]?', schema, flags=re.I)
+            with app.app_context():
+                conn = db.get_db()
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                existing = {row[0] for row in cursor.fetchall()}
+            missing = [t for t in table_names if t not in existing]
+            if missing:
+                logger.warning(f"Missing tables {missing} -> will reinitialize database.")
+                need_init = True
+            else:
+                logger.info("Database schema OK.")
+        except Exception as e:
+            logger.error(f"Error while verifying database schema: {e}. Will reinitialize.")
+            need_init = True
+
+    if need_init:
+        try:
+            if db_path and os.path.exists(db_path):
+                os.remove(db_path)
+                logger.info("Removed existing corrupted/old database file.")
+        except Exception as e:
+            logger.error(f"Failed to remove existing database file: {e}")
+        if not init_db(app):
+            logger.error("Database initialization failed. Exiting.")
+            return
+
     # 注册SocketIO事件处理器
     register_socketio_events(socketio)
     logger.info("SocketIO事件处理器已注册")

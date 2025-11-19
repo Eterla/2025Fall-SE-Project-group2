@@ -226,7 +226,7 @@ def get_chat_history(other_user_id, item_id):
             "ok": False,
             "error": {
                 "code": "ITEM_NOT_FOUND",
-                "message": "商品不存在"
+                "message": "Product not exists"
             }
         }), 404
     
@@ -237,7 +237,7 @@ def get_chat_history(other_user_id, item_id):
             "ok": False,
             "error": {
                 "code": "USER_NOT_FOUND",
-                "message": "用户不存在"
+                "message": "User not exists"
             }
         }), 404
     
@@ -248,11 +248,11 @@ def get_chat_history(other_user_id, item_id):
             "data": messages
         })
     except Exception as e:
-        logger.exception("获取聊天记录失败")
+        logger.exception("Fail to get chat history")
         return jsonify({
             "ok": False,
             "error": {
                 "code": "FETCH_FAILED",
-                "message": "获取聊天记录失败"
+                "message": "Fail to get chat history"
             }
         }), 500

@@ -473,7 +473,17 @@ class Message:
         Conversation.update_on_new_message(conversation_id, from_user_id, message_id)
         
         logger.debug(f"Message sent: id={message_id}, conversation={conversation_id}")
-        return message_id
+        # return the message_data_package
+        return {
+            'id': message_id,
+            'conversation_id': conversation_id,
+            'from_user_id': from_user_id,
+            'to_user_id': to_user_id,
+            'item_id': item_id,
+            'content': content,
+            'is_read': False,
+            'created_at': curr_time
+        }
     
     @staticmethod
     def get_conversation(user_id, other_user_id, item_id):

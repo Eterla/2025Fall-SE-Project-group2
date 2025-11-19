@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
-
+import './assets/css/global.css' // 路径根据实际文件位置调整
 // 引入axios
 import axios from './axios';
 

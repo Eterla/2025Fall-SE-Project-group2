@@ -109,7 +109,7 @@ export default {
 .school-bg {
   width: 100%;
   height: 450px;
-  background-image: url('pic1.png');
+  background-image: url('@/assets/images/bg1.png');
   background-size: cover;
   background-position: center;
   position: relative;

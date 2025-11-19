@@ -23,7 +23,7 @@
         class="list-group-item list-group-item-action d-flex gap-3 p-3 cursor-pointer"
         v-for="conv in conversations" 
         :key="conv.other_user_id"
-        @click="goToChat(conv.other_user_id, conv.last_item_id)"
+        @click="goToChat(conv.other_user_id, conv.item_id)"
       >
         <!-- 对方头像（用用户名首字母） -->
         <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
@@ -70,34 +70,14 @@ export default {
       try {
         // 调用后端接口获取消息列表
         const response = await axios.get('/messages/conversations');
+        console.log('获取消息列表响应：', response);
         if (response.ok) {
           this.conversations = response.data;
         } else {
-          alert(response.data.message || '获取消息列表失败');
+          alert(response.error || '获取消息列表失败');
         }
       } catch (error) {
         console.error('获取消息列表失败:', error);
-        // 后端接口未实现时，用模拟数据显示
-        this.conversations = [
-          {
-            other_user_id: 2,
-            other_username: '卖家A',
-            last_item_id: 1, // 最后一条消息关联的商品ID
-            last_time: '2025-10-28 10:30',
-            last_sender: 'other', // 最后一条消息发送者（me/other）
-            last_content: '这个商品还在吗？',
-            unread_count: 1 // 未读消息数量
-          },
-          {
-            other_user_id: 3,
-            other_username: '买家B',
-            last_item_id: 2,
-            last_time: '2025-10-27 16:45',
-            last_sender: 'me',
-            last_content: '最低200元出，不议价',
-            unread_count: 0
-          }
-        ];
       } finally {
         this.loading = false;
       }
@@ -115,7 +95,7 @@ export default {
         name: 'ChatDetail',
         params: {
           otherUserId: otherUserId,
-          itemId: itemId
+          itemId: itemId,
         }
       });
     }

@@ -31,7 +31,7 @@ const routes = [
   { path: '/user-center', name: 'UserCenter', component: UserCenter, beforeEnter: requireAuth },
   { path: '/favorites', name: 'Favorites', component: Favorites, beforeEnter: requireAuth },
   { path: '/messages', name: 'Messages', component: Messages, beforeEnter: requireAuth },
-  { path: '/chat/:otherUserId/:itemId', name: 'ChatDetail', component: ChatDetail, beforeEnter: requireAuth }
+  { path: '/conversations/:otherUserId/:itemId', name: 'ChatDetail', component: ChatDetail, beforeEnter: requireAuth }
 ];
 
 const router = createRouter({

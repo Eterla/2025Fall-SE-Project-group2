@@ -243,6 +243,7 @@ def get_chat_history(other_user_id, item_id):
     
     try:
         messages = Message.get_conversation(session['user_id'], other_user_id, item_id)
+        print("get_chat_history messages:", messages)
         return jsonify({
             "ok": True,
             "data": messages

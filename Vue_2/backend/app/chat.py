@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from flask import Blueprint, request, jsonify, session
-from flask_socketio import emit, join_room, leave_room, rooms
+from flask_socketio import emit, join_room, leave_room
 from .auth import token_required
 from .models import Message, Conversation, User, Item
 from datetime import datetime
@@ -14,7 +14,6 @@ chat_bp = Blueprint("chat", __name__)
 # 存储用户socket连接映射 {user_id: sid}
 user_sockets = {}
 
-# 如果后续发现该验证也被其他地方需要使用，可以考虑移到main.py的blueprint外部或者utils.py中
 def verify_socket_token(token):
     """验证Socket连接的JWT token并返回user_id"""
     try:
@@ -38,7 +37,6 @@ def register_socketio_events(socketio):
         """客户端连接事件"""
         logger.info(f"Client attempting to connect, auth: {auth}")
         
-        # 验证token
         token = auth.get('token') if auth else None
         if not token:
             logger.warning("Connection rejected: no token provided")
@@ -52,7 +50,7 @@ def register_socketio_events(socketio):
         # 记录用户socket连接
         user_sockets[user_id] = request.sid
         
-        # 加入用户专属房间（用于接收消息）
+        # 只加入用户专属房间
         join_room(f"user_{user_id}")
         
         logger.info(f"User {user_id} connected with sid {request.sid}")
@@ -62,7 +60,6 @@ def register_socketio_events(socketio):
     @socketio.on('disconnect')
     def handle_disconnect():
         """客户端断开连接事件"""
-        # 从映射中移除
         user_id = None
         for uid, sid in list(user_sockets.items()):
             if sid == request.sid:
@@ -77,42 +74,22 @@ def register_socketio_events(socketio):
             logger.info(f"Unknown client disconnected: {request.sid}")
     
     
-    @socketio.on('join_conversation')
-    def handle_join_conversation(data):
-        """加入会话房间（用于实时接收该会话的消息）"""
-        conversation_id = data.get('conversation_id')
-        if conversation_id:
-            room = f"conversation_{conversation_id}"
-            join_room(room)
-            logger.info(f"Client {request.sid} joined {room}")
-            emit('joined_conversation', {'conversation_id': conversation_id})
-    
-    
-    @socketio.on('leave_conversation')
-    def handle_leave_conversation(data):
-        """离开会话房间"""
-        conversation_id = data.get('conversation_id')
-        if conversation_id:
-            room = f"conversation_{conversation_id}"
-            leave_room(room)
-            logger.info(f"Client {request.sid} left {room}")
-            emit('left_conversation', {'conversation_id': conversation_id})
-    
-    
+    # 简化版：通过 user room 实现正在输入
     @socketio.on('typing')
     def handle_typing(data):
         """用户正在输入的状态通知"""
-        conversation_id = data.get('conversation_id')
+        to_user_id = data.get('to_user_id')  # 改为接收 to_user_id
         user_id = data.get('user_id')
+        item_id = data.get('item_id')  # 用于前端判断是哪个会话
         is_typing = data.get('is_typing', True)
         
-        if conversation_id:
-            room = f"conversation_{conversation_id}"
+        if to_user_id:
+            # 直接推送给对方的 user room
             emit('user_typing', {
                 'user_id': user_id,
-                'conversation_id': conversation_id,
+                'item_id': item_id,  # 前端用这个判断是否显示
                 'is_typing': is_typing
-            }, room=room, skip_sid=request.sid)
+            }, room=f"user_{to_user_id}")
 
 
 # ----- HTTP API -----
@@ -138,7 +115,6 @@ def send_message():
             }
         }), 400
     
-    # 类型转换和验证
     try:
         to_user_id = int(to_user_id)
         item_id = int(item_id)
@@ -184,7 +160,7 @@ def send_message():
         }), 400
     
     try:
-        # 发送消息（会自动创建或更新会话）
+        # 发送消息
         message_data = Message.send(session['user_id'], to_user_id, item_id, content)
         
         # 构造返回数据
@@ -198,11 +174,8 @@ def send_message():
             "created_at": message_data['created_at']
         }
         
-        # 实时推送消息给接收方（通过SocketIO）
+        # 简化：只推送到接收方的 user room
         socketio.emit('new_message', response_data, room=f"user_{to_user_id}")
-        
-        # 也推送到会话房间（如果有人在该会话页面）
-        socketio.emit('new_message', response_data, room=f"conversation_{message_data['conversation_id']}")
         
         logger.info(f"Message sent from {session['user_id']} to {to_user_id}, pushed via SocketIO")
         

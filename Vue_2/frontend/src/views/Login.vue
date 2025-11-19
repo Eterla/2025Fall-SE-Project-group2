@@ -3,7 +3,7 @@
     <div class="row justify-content-center">
       <div class="col-md-6">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header bg-red text-white">
             <h3 class="text-center">用户登录</h3>
           </div>
           <div class="card-body">
@@ -28,7 +28,7 @@
                   required
                 >
               </div>
-              <button type="submit" class="btn btn-primary w-100">登录</button>
+              <button type="submit" class="btn btn-red w-100">登录</button>
             </form>
             <p class="text-center mt-3">
               还没有账号？<router-link to="/register">立即注册</router-link>

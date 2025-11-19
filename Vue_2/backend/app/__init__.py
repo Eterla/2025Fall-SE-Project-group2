@@ -4,8 +4,12 @@ logger = logging.getLogger(__name__)
 import os
 from flask import Flask
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from .boya_database import BoyaDatabase
+
 db = BoyaDatabase()
+socketio = SocketIO()
+
 def create_app(test_config=None):
     
     app = Flask(__name__, instance_relative_config=True)
@@ -35,7 +39,11 @@ def create_app(test_config=None):
         pass
 
     # 启用CORS
-    CORS(app, supports_credentials=True)
+    CORS(app, supports_credentials=True, origins="*")
+
+    # Init SocketIO（支持跨域）
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    logger.info("SocketIO初始化完成")
 
     # 初始化数据库
     db.init_app(app)
@@ -44,9 +52,11 @@ def create_app(test_config=None):
     # 注册蓝图
     from .auth import auth_bp
     from .main import main_bp
+    from .chat import chat_bp
+    
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
-
-    logger.info("Flask应用创建完成")
+    app.register_blueprint(chat_bp)
+    logger.info("Flask应用创建完成（已注册 auth, main, chat 蓝图）")
     
     return app

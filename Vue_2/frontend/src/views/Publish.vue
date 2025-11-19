@@ -60,8 +60,7 @@
                     type="text" 
                     class="form-control" 
                     v-model="newTag" 
-                    placeholder="输入标签后按回车添加"
-                    @keyup.enter="addTag"
+                    placeholder="输入标签后点击添加按钮"
                   >
                   <button 
                     type="button" 
@@ -177,6 +176,7 @@ export default {
 
     // 添加标签
     addTag() {
+       console.log('addTag 方法被调用，当前 newTag 值:', this.newTag);
       if (!this.newTag.trim()) return;
       
       // 防止重复添加

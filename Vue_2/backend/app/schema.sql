@@ -42,16 +42,46 @@ CREATE TABLE IF NOT EXISTS favorites (
     UNIQUE(user_id, item_id)
 );
 
--- 消息表
-CREATE TABLE IF NOT EXISTS messages (
+-- conversation table
+CREATE TABLE conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user1_id INTEGER NOT NULL,
+    user2_id INTEGER NOT NULL,
+    item_id INTEGER NOT NULL,
+
+    last_message_id INTEGER, -- to address the last message quickly, for message preview 
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- unread message counts for each user
+    unread_count_user1 INTEGER NOT NULL DEFAULT 0,
+    unread_count_user2 INTEGER NOT NULL DEFAULT 0,
+
+    -- ensure one conversation per user pair per item
+    UNIQUE(user1_id, user2_id, item_id),  
+
+    FOREIGN KEY (user1_id) REFERENCES users(id),
+    FOREIGN KEY (user2_id) REFERENCES users(id),
+    FOREIGN KEY (item_id) REFERENCES items(id),
+    FOREIGN KEY (last_message_id) REFERENCES messages(id)
+);
+
+-- 消息表
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL,
     from_user_id INTEGER NOT NULL,
     to_user_id INTEGER NOT NULL,
     item_id INTEGER NOT NULL,
+
     content TEXT NOT NULL,
+
+    -- 消息是否已读（用于离线消息功能）
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (from_user_id) REFERENCES users (id),
-    FOREIGN KEY (to_user_id) REFERENCES users (id),
-    FOREIGN KEY (item_id) REFERENCES items (id)
+
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_user_id) REFERENCES users(id),
+    FOREIGN KEY (to_user_id) REFERENCES users(id),
+    FOREIGN KEY (item_id) REFERENCES items(id)
 );

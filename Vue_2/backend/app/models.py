@@ -309,94 +309,226 @@ class Favorite:
         ).fetchone()
         return favorite is not None
 
-class Message:
+
+class Conversation:
+    """会话管理类 - 管理用户之间关于特定商品的对话"""
+    
     @staticmethod
-    def send(from_user_id, to_user_id, item_id, content):
+    def get_or_create(user1_id, user2_id, item_id):
+        """获取或创建会话，确保 user1_id < user2_id 以保证唯一性"""
         conn = db.get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """INSERT INTO messages (from_user_id, to_user_id, item_id, content, 
-               is_read, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
-            (from_user_id, to_user_id, item_id, content, False, datetime.datetime.now())
-        )
+        
+        # to ensure user1_id < user2_id
+        if user1_id > user2_id:
+            user1_id, user2_id = user2_id, user1_id
+        
+        # try to find a existing conversation
+        cursor.execute("""
+            SELECT id FROM conversations 
+            WHERE user1_id = ? AND user2_id = ? AND item_id = ?
+        """, (user1_id, user2_id, item_id))
+        
+        row = cursor.fetchone()
+        if row:
+            return row['id']
+        
+        # create a new conversation
+        curr_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            INSERT INTO conversations 
+            (user1_id, user2_id, item_id, last_updated, unread_count_user1, unread_count_user2)
+            VALUES (?, ?, ?, ?, 0, 0)
+        """, (user1_id, user2_id, item_id, curr_time))
+        
         conn.commit()
         return cursor.lastrowid
     
     @staticmethod
-    def get_conversation(user_id, other_user_id, item_id):
+    def update_on_new_message(conversation_id, from_user_id, message_id):
+        """新消息发送时更新会话信息"""
         conn = db.get_db()
-        messages = conn.execute(
-            """SELECT messages.*, 
-               u1.username as from_username, 
-               u2.username as to_username 
-               FROM messages 
-               JOIN users u1 ON messages.from_user_id = u1.id 
-               JOIN users u2 ON messages.to_user_id = u2.id 
-               WHERE 
-               ((messages.from_user_id = ? AND messages.to_user_id = ?) OR 
-                (messages.from_user_id = ? AND messages.to_user_id = ?)) AND 
-               messages.item_id = ?
-               ORDER BY messages.created_at ASC""",
-            (user_id, other_user_id, other_user_id, user_id, item_id)
-        ).fetchall()
+        cursor = conn.cursor()
         
-        # 标记为已读
-        conn.execute(
-            """UPDATE messages SET is_read = ? 
-               WHERE to_user_id = ? AND from_user_id = ? AND item_id = ?""",
-            (True, user_id, other_user_id, item_id)
-        )
+        # get conversation participants
+        cursor.execute("""
+            SELECT user1_id, user2_id FROM conversations WHERE id = ?
+        """, (conversation_id,))
+        
+        conv = cursor.fetchone()
+        if not conv:
+            return
+        
+        # ensure which user is sending the message and update unread counts
+        if from_user_id == conv['user1_id']:
+            # user1 发送，user2 未读+1
+            cursor.execute("""
+                UPDATE conversations 
+                SET last_message_id = ?, 
+                    last_updated = ?,
+                    unread_count_user2 = unread_count_user2 + 1
+                WHERE id = ?
+            """, (message_id, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), conversation_id))
+        else:
+            # user2 发送，user1 未读+1
+            cursor.execute("""
+                UPDATE conversations 
+                SET last_message_id = ?, 
+                    last_updated = ?,
+                    unread_count_user1 = unread_count_user1 + 1
+                WHERE id = ?
+            """, (message_id, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), conversation_id))
+        
         conn.commit()
+    
+    @staticmethod
+    def mark_as_read(user_id, other_user_id, item_id):
+        """标记会话为已读（清零当前用户的未读计数）"""
+        conn = db.get_db()
+        
+        # ensure the order of user IDs
+        user1_id, user2_id = (user_id, other_user_id) if user_id < other_user_id else (other_user_id, user_id)
+        
+        # ensure which user's unread count to reset
+        if user_id == user1_id:
+            conn.execute("""
+                UPDATE conversations 
+                SET unread_count_user1 = 0
+                WHERE user1_id = ? AND user2_id = ? AND item_id = ?
+            """, (user1_id, user2_id, item_id))
+        else:
+            conn.execute("""
+                UPDATE conversations 
+                SET unread_count_user2 = 0
+                WHERE user1_id = ? AND user2_id = ? AND item_id = ?
+            """, (user1_id, user2_id, item_id))
+        
+        conn.commit()
+    
+    @staticmethod
+    def get_user_conversations(user_id):
+        """获取用户的所有会话列表"""
+        conn = db.get_db()
+        
+        rows = conn.execute("""
+            SELECT 
+                c.id as conversation_id,
+                CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END as other_user_id,
+                c.item_id,
+                u.username as other_username,
+                i.title as item_title,
+                i.image_path as item_image,
+                c.last_updated as last_message_time,
+                CASE WHEN c.user1_id = ? THEN c.unread_count_user1 ELSE c.unread_count_user2 END as unread_count,
+                m.content as last_message_content
+            FROM conversations c
+            LEFT JOIN users u ON u.id = CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END
+            LEFT JOIN items i ON i.id = c.item_id
+            LEFT JOIN messages m ON m.id = c.last_message_id
+            WHERE c.user1_id = ? OR c.user2_id = ?
+            ORDER BY c.last_updated DESC
+        """, (user_id, user_id, user_id, user_id, user_id)).fetchall()
+        
+        result = []
+        for row in rows:
+            result.append({
+                'conversation_id': row['conversation_id'],
+                'other_user_id': row['other_user_id'],
+                'other_username': row['other_username'],
+                'item_id': row['item_id'],
+                'item_title': row['item_title'],
+                'item_image': row['item_image'],
+                'last_message_time': row['last_message_time'],
+                'last_message_content': row['last_message_content'],
+                'unread_count': row['unread_count'] or 0
+            })
+        
+        return result
+
+
+class Message:
+    """消息类 - 处理用户之间的消息发送与读取"""
+    
+    @staticmethod
+    def send(from_user_id, to_user_id, item_id, content):
+        """发送消息（会自动创建或更新会话）"""
+        conn = db.get_db()
+        cursor = conn.cursor()
+        
+        # 获取或创建会话
+        conversation_id = Conversation.get_or_create(from_user_id, to_user_id, item_id)
+        
+        # 插入消息
+        curr_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            INSERT INTO messages 
+            (conversation_id, from_user_id, to_user_id, item_id, content, is_read, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+        """, (conversation_id, from_user_id, to_user_id, item_id, content, curr_time))
+        
+        message_id = cursor.lastrowid
+        conn.commit()
+        
+        # 更新会话信息
+        Conversation.update_on_new_message(conversation_id, from_user_id, message_id)
+        
+        logger.debug(f"Message sent: id={message_id}, conversation={conversation_id}")
+        # return the message_data_package
+        return {
+            'id': message_id,
+            'conversation_id': conversation_id,
+            'from_user_id': from_user_id,
+            'to_user_id': to_user_id,
+            'item_id': item_id,
+            'content': content,
+            'is_read': False,
+            'created_at': curr_time
+        }
+    
+    @staticmethod
+    def get_conversation(user_id, other_user_id, item_id):
+        """获取两个用户之间关于某商品的聊天记录"""
+        conn = db.get_db()
+        
+        messages = conn.execute("""
+            SELECT 
+                m.*,
+                u1.username as from_username,
+                u2.username as to_username
+            FROM messages m
+            JOIN users u1 ON m.from_user_id = u1.id
+            JOIN users u2 ON m.to_user_id = u2.id
+            WHERE 
+                ((m.from_user_id = ? AND m.to_user_id = ?) OR 
+                 (m.from_user_id = ? AND m.to_user_id = ?))
+                AND m.item_id = ?
+            ORDER BY m.created_at ASC
+        """, (user_id, other_user_id, other_user_id, user_id, item_id)).fetchall()
+        
+        # 标记消息为已读（只标记发给当前用户的消息）
+        conn.execute("""
+            UPDATE messages 
+            SET is_read = 1
+            WHERE to_user_id = ? AND from_user_id = ? AND item_id = ? AND is_read = 0
+        """, (user_id, other_user_id, item_id))
+        conn.commit()
+        
+        # 更新会话未读计数
+        Conversation.mark_as_read(user_id, other_user_id, item_id)
         
         result = []
         for msg in messages:
             result.append({
                 'id': msg['id'],
+                'conversation_id': msg['conversation_id'],
                 'from_user_id': msg['from_user_id'],
                 'to_user_id': msg['to_user_id'],
                 'item_id': msg['item_id'],
                 'content': msg['content'],
-                'is_read': msg['is_read'],
+                'is_read': bool(msg['is_read']),
                 'created_at': msg['created_at'],
                 'from_username': msg['from_username'],
                 'to_username': msg['to_username']
-            })
-        
-        return result
-    
-    @staticmethod
-    def get_conversations(user_id):
-        conn = db.get_db()
-        conversations = conn.execute(
-            """SELECT DISTINCT 
-               CASE WHEN from_user_id = ? THEN to_user_id ELSE from_user_id END as other_user_id,
-               item_id,
-               (SELECT username FROM users WHERE id = other_user_id) as other_username,
-               (SELECT title FROM items WHERE id = item_id) as item_title,
-               (SELECT image_path FROM items WHERE id = item_id) as item_image,
-               (SELECT MAX(created_at) FROM messages 
-                WHERE ((from_user_id = ? AND to_user_id = other_user_id) OR 
-                       (from_user_id = other_user_id AND to_user_id = ?)) AND 
-                      item_id = messages.item_id) as last_message_time,
-               (SELECT COUNT(*) FROM messages 
-                WHERE to_user_id = ? AND from_user_id = other_user_id AND 
-                      item_id = messages.item_id AND is_read = 0) as unread_count
-               FROM messages
-               WHERE from_user_id = ? OR to_user_id = ?
-               ORDER BY last_message_time DESC""",
-            (user_id, user_id, user_id, user_id, user_id, user_id)
-        ).fetchall()
-        
-        result = []
-        for conv in conversations:
-            result.append({
-                'other_user_id': conv['other_user_id'],
-                'other_username': conv['other_username'],
-                'item_id': conv['item_id'],
-                'item_title': conv['item_title'],
-                'item_image': conv['item_image'],
-                'last_message_time': conv['last_message_time'],
-                'unread_count': conv['unread_count']
             })
         
         return result

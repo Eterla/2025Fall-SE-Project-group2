@@ -77,7 +77,6 @@ cd Vue_2/backend
 pip install -r requirements.txt
 ```
 
-
 3. 启动后端服务器：
 ```bash
 python run.py

@@ -53,9 +53,26 @@ def main(cfg: DictConfig):
     from app import create_app, socketio
     from app.chat import register_socketio_events
     
+    # Init Database
+
     # 创建Flask应用
     app = create_app()
     
+    # 先尝试连接数据库，如果失败则初始化
+    try:
+        with app.app_context():
+            conn = db.get_db()
+            # 尝试查询一个表来验证连接
+            conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            logger.info("数据库连接成功")
+    except Exception as e:
+        logger.warning(f"数据库连接失败，尝试初始化: {e}")
+        if not init_db(app):
+            logger.error("数据库初始化失败，无法继续")
+            return
+        else:
+            logger.info("数据库初始化成功")
+
     # 注册SocketIO事件处理器
     register_socketio_events(socketio)
     logger.info("SocketIO事件处理器已注册")

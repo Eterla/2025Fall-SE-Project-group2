@@ -34,10 +34,10 @@
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <h6 class="mb-0">{{ conv.other_username }}</h6>
-            <small class="text-muted">{{ formatTime(conv.last_time) }}</small>
+            <small class="text-muted">{{ formatTime(conv.last_message_time) }}</small>
           </div>
           <p class="mb-0 text-truncate">
-            {{ conv.last_sender === 'me' ? '我：' : '' }}{{ conv.last_content }}
+            {{ conv.last_message_content }}
           </p>
         </div>
 
@@ -85,8 +85,30 @@ export default {
 
     // 格式化时间（简化版）
     formatTime(timeStr) {
-      // 实际项目中可根据需要格式化（如：今天/昨天/具体日期）
-      return timeStr;
+      if (!timeStr) return ''
+      // 兼容 "YYYY-MM-DD HH:MM:SS" 和 ISO
+      let d = new Date(timeStr)
+      if (isNaN(d)) {
+        d = new Date(timeStr.replace(' ', 'T'))
+        if (isNaN(d)) return timeStr
+      }
+
+      const now = new Date()
+      const dateOnly = dt => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+      const diffDays = Math.round((dateOnly(d) - dateOnly(now)) / (24 * 60 * 60 * 1000))
+      const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+      if (diffDays === 0) return `今天 ${timePart}`
+      if (diffDays === -1) return `昨天 ${timePart}`
+      if (diffDays === 1) return `明天 ${timePart}`
+
+      if (d.getFullYear() === now.getFullYear()) {
+        return `${d.getMonth() + 1}月${d.getDate()}日 ${timePart}`
+      }
+      // 不同年份使用完整日期
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${d.getFullYear()}-${mm}-${dd} ${timePart}`
     },
 
     // 进入与该用户的聊天界面

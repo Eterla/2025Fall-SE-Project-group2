@@ -36,7 +36,7 @@
                 {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
               </div>
               <div>
-                <div class="bg-light p-2 rounded rounded-start-0 max-width-50">
+                <div class="message-bubble message-bubble--other">
                   {{ msg.content }}
                 </div>
                 <small class="text-muted ms-2">{{ formatTime(msg.created_at) }}</small>
@@ -46,7 +46,7 @@
             <!-- 我发送的消息 -->
             <div v-else class="d-flex align-items-end justify-content-end gap-2">
               <div class="text-end">
-                <div class="bg-primary text-white p-2 rounded rounded-end-0 max-width-50">
+                <div class="message-bubble message-bubble--me">
                   {{ msg.content }}
                 </div>
                 <small class="text-muted me-2">{{ formatTime(msg.created_at) }}</small>
@@ -73,6 +73,7 @@
             class="form-control" 
             v-model="messageContent"
             @input="onInput" 
+            @keydown="onKeydown"
             placeholder="输入消息..."
             rows="2"
             :disabled="sending"
@@ -286,6 +287,16 @@ export default {
       }
     },
 
+    onKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (this.sending) return
+        const content = (this.messageContent || '').trim()
+        if (!content) return
+        this.sendMessage()
+      }
+    },
+
     // 点击跳转到第一条未读或底部
     jumpToLatest() {
       const idx = this.firstUnreadIndex
@@ -388,4 +399,48 @@ export default {
 .max-width-50 { max-width: 50%; }
 .card-body[style*="height: 500px"]::-webkit-scrollbar { width: 6px; }
 .card-body[style*="height: 500px"]::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+
+/* 消息气泡样式 */
+.message-bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  display: inline-block;
+  max-width: 40ch;  
+  width: auto;
+  white-space: normal; 
+  overflow-wrap: break-word; 
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  line-height: 1.35;
+  font-size: 0.95rem;
+}
+
+/* 对方消息（左侧） */
+.message-bubble--other {
+  background: #f1f3f5;
+  color: #212529;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+/* 我发送的消息（右侧） */
+.message-bubble--me {
+  background: #900023;
+  color: #fff;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  align-self: flex-end;
+}
+
+/* 时间戳样式 */
+.msg-time {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
 </style>

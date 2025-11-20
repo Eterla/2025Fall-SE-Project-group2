@@ -49,7 +49,7 @@
             <div class="col-md-4 mb-4" v-for="item in myItems" :key="item.id">
               <div class="card item-card">
                 <img 
-                  :src="item.imagePath ? `/images/${item.imagePath}` : '/images/default.jpg'" 
+                  :src="item.image_path ? '/' + item.image_path.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')"  
                   class="card-img-top item-image" 
                   :alt="item.title"
                 >

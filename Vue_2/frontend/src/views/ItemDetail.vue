@@ -10,7 +10,7 @@
     <!-- 商品不存在提示 -->
     <div v-if="!loading && !item" class="text-center py-5">
       <h3>商品不存在或已被删除</h3>
-      <router-link to="/" class="btn btn-primary mt-3">返回首页</router-link>
+      <router-link to="/" class="btn btn-red mt-3">返回首页</router-link>
     </div>
 
     <!-- 商品详情 -->
@@ -18,7 +18,7 @@
       <!-- 商品图片 -->
       <div class="col-md-6">
         <img 
-          :src="item.imagePath ? `/images/${item.imagePath}` : '/images/default.jpg'" 
+          :src="item.imagePath ? '/' + item.imagePath.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')"  
           class="img-fluid rounded" 
           :alt="item.title"
         >
@@ -64,7 +64,7 @@
             <p class="card-text">用户名：{{ item.seller_name }}</p>
             <!-- 登录后显示聊天按钮 -->
             <button 
-              class="btn btn-primary me-2" 
+              class="btn btn-red me-2" 
               @click="goToChat"
               v-if="isLogin && item.seller_id !== currentUserId"
             >
@@ -75,7 +75,7 @@
 
         <!-- 收藏按钮（登录后显示） -->
         <button 
-          class="btn btn-outline-primary" 
+          class="btn btn-outline-red" 
           @click="toggleFavorite"
           v-if="isLogin"
         >

@@ -7,7 +7,7 @@
           <i class="bi bi-arrow-left"></i>
         </button>
 
-        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+        <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
           {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
         </div>
         <div>
@@ -32,7 +32,7 @@
 
             <!-- 非我发出的消息 -->
             <div v-if="msg.from_user_id !== currentUserId" class="d-flex align-items-end gap-2">
-              <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
+              <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
                 {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
               </div>
               <div>
@@ -79,7 +79,7 @@
           ></textarea>
           <button 
             type="submit" 
-            class="btn btn-primary" 
+            class="btn btn-red" 
             :disabled="!messageContent.trim() || sending"
             style="white-space: nowrap;"
           >

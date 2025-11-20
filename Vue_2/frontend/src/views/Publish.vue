@@ -3,7 +3,7 @@
     <div class="row justify-content-center">
       <div class="col-md-8">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header bg-red text-white">
             <h3 class="text-center">发布商品</h3>
           </div>
           <div class="card-body">
@@ -116,7 +116,7 @@
               <!-- 提交按钮 -->
               <button 
                 type="submit" 
-                class="btn btn-primary w-100" 
+                class="btn btn-red w-100" 
                 :disabled="submitting"
               >
                 <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>

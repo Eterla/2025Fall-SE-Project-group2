@@ -13,7 +13,7 @@
     <!-- 没有收藏时显示 -->
     <div v-if="!loading && favorites.length === 0" class="text-center py-5">
       <p class="text-muted">你还没有收藏任何商品</p>
-      <router-link to="/" class="btn btn-primary">去逛逛</router-link>
+      <router-link to="/" class="btn btn-red">去逛逛</router-link>
     </div>
 
     <!-- 收藏列表 -->
@@ -47,7 +47,7 @@
             <p class="card-text text-muted" style="font-size: 0.9rem;">
               卖家：{{ item.seller.username }}
             </p>
-            <router-link :to="`/item/${item.id}`" class="btn btn-primary w-100">查看详情</router-link>
+            <router-link :to="`/item/${item.id}`" class="btn btn-red w-100">查看详情</router-link>
           </div>
         </div>
       </div>

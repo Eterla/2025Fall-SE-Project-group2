@@ -3,7 +3,7 @@
     <div class="row justify-content-center">
       <div class="col-md-6">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header bg-red text-white">
             <h3 class="text-center">用户注册</h3>
           </div>
           <div class="card-body">
@@ -63,7 +63,7 @@
                 >
               </div>
 
-              <button type="submit" class="btn btn-primary w-100" :disabled="password !== confirmPassword">
+              <button type="submit" class="btn btn-red w-100" :disabled="password !== confirmPassword">
                 注册
               </button>
             </form>

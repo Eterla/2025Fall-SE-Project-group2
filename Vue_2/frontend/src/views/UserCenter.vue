@@ -10,14 +10,14 @@
     <div v-if="!loading">
       <!-- 用户信息卡片 -->
       <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-red text-white">
           <h3>个人信息</h3>
         </div>
         <div class="card-body">
           <div class="row">
             <div class="col-md-2">
               <!-- 头像（默认用用户名首字母） -->
-              <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fs-3" style="width: 100px; height: 100px;">
+              <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center fs-3" style="width: 100px; height: 100px;">
                 {{ userInfo.username.charAt(0).toUpperCase() }}
               </div>
             </div>
@@ -33,7 +33,7 @@
 
       <!-- 我的商品列表 -->
       <div class="card">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-red text-white d-flex justify-content-between align-items-center">
           <h3>我的商品</h3>
           <router-link to="/publish" class="btn btn-light">发布新商品</router-link>
         </div>
@@ -41,7 +41,7 @@
           <!-- 没有商品时显示 -->
           <div v-if="myItems.length === 0" class="text-center py-5">
             <p class="text-muted">你还没有发布任何商品</p>
-            <router-link to="/publish" class="btn btn-primary">去发布</router-link>
+            <router-link to="/publish" class="btn btn-red">去发布</router-link>
           </div>
 
           <!-- 商品列表 -->
@@ -49,7 +49,7 @@
             <div class="col-md-4 mb-4" v-for="item in myItems" :key="item.id">
               <div class="card item-card">
                 <img 
-                  :src="item.imagePath ? `/images/${item.imagePath}` : '/images/default.jpg'" 
+                  :src="item.image_path ? '/' + item.image_path.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')"  
                   class="card-img-top item-image" 
                   :alt="item.title"
                 >

@@ -24,7 +24,7 @@
       <div class="card-body p-4">
         <!-- 消息列表：按时间排序后一次性循环 -->
         <div class="d-flex flex-column gap-3">
-          <template v-for="(msg, idx) in sortedMessages" :key="msg.id">
+          <div v-for="(msg, idx) in sortedMessages" :key="msg.id">
             <!-- 在第一条未读消息之前渲染未读分隔条 -->
             <div v-if="idx === firstUnreadIndex" class="text-center my-1">
               <span class="badge bg-info text-dark">最新消息</span>
@@ -36,26 +36,25 @@
                 {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
               </div>
               <div>
-                <div class="bg-light p-2 rounded rounded-start-0 max-width-50">
+                <div class="message-bubble message-bubble--other">
                   {{ msg.content }}
                 </div>
-                <small class="text-muted ms-2">{{ formatTime(msg.created_at) }}</small>
+                <small v-if="shouldShowTime(idx)" class="msg-time text-muted ms-2">{{ formatTime(msg.created_at) }}</small>
               </div>
             </div>
-
             <!-- 我发送的消息 -->
             <div v-else class="d-flex align-items-end justify-content-end gap-2">
               <div class="text-end">
-                <div class="bg-primary text-white p-2 rounded rounded-end-0 max-width-50">
+                <div class="message-bubble message-bubble--me">
                   {{ msg.content }}
                 </div>
-                <small class="text-muted me-2">{{ formatTime(msg.created_at) }}</small>
+                <small v-if="shouldShowTime(idx)" class="msg-time text-muted me-2">{{ formatTime(msg.created_at) }}</small>
               </div>
               <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
                 {{ currentUserInfo.username?.charAt(0).toUpperCase() }}
               </div>
             </div>
-          </template>
+          </div>
         </div>
       </div>
     </div>
@@ -73,6 +72,7 @@
             class="form-control" 
             v-model="messageContent"
             @input="onInput" 
+            @keydown="onKeydown"
             placeholder="输入消息..."
             rows="2"
             :disabled="sending"
@@ -214,7 +214,7 @@ export default {
         this.currentUserInfo = {}
         this.currentUserId = null
       }
-      this.otherUserInfo = { username: `用户${this.otherUserId}` }
+      this.otherUserInfo = { username: '' }
     },
 
     async getRelatedItem() {
@@ -231,6 +231,18 @@ export default {
     async getHistoryMessages() {
       try {
         const resp = await axios.get(`/messages/conversations/${this.otherUserId}/${this.itemId}`)
+        console.log('getHistoryMessages resp', resp)
+        // 尝试从响应中获取对方用户名
+        let i = 0;
+        while (i < resp.data.length) {
+          if (resp.data[i].from_user_id == this.otherUserId) {
+            this.otherUserInfo = {
+              username: resp.data[i].from_username || ''
+            }
+            break
+          }
+          i++;
+        }
         const payload = resp && resp.data ? (resp.data.data ?? resp.data) : null
         if (Array.isArray(payload)) {
           const messages = payload
@@ -263,6 +275,17 @@ export default {
       const conv = data && data.conversation_id ? String(data.conversation_id) : this.conversationId
       if (!conv) return
       this.chatStore.setTyping(conv, Number(data.user_id), !!data.is_typing)
+    },
+
+    // 键盘发送：按 Enter 发送，Shift+Enter 换行
+    onKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (this.sending) return
+        const content = (this.messageContent || '').trim()
+        if (!content) return
+        this.sendMessage()
+      }
     },
 
     // 当滚动时检测是否在底部
@@ -377,8 +400,31 @@ export default {
       }
     },
 
+    // 将重复时间移动到每组消息的最后一条（组内隐藏，组尾显示）
+    shouldShowTime(idx) {
+      const msgs = this.sortedMessages || []
+      if (!msgs.length) return false
+      // 最后一条消息始终显示时间
+      if (idx === msgs.length - 1) return true
+      const cur = msgs[idx]
+      const next = msgs[idx + 1]
+      if (!cur || !next) return true
+      const tCur = Date.parse(cur.created_at || cur.createdAt || 0)
+      const tNext = Date.parse(next.created_at || next.createdAt || 0)
+      if (Number.isNaN(tCur) || Number.isNaN(tNext)) return true
+      // 如果下一条与当前相差 >= 60s，则当前为组尾，显示时间；否则隐藏当前时间
+      return (tNext - tCur) >= 60000
+    },
+    
+    // 不显示秒，仅显示小时:分钟（例如 09:05）
     formatTime(timeStr) {
-      return new Date(timeStr).toLocaleTimeString()
+      if (!timeStr) return ''
+      let d = new Date(timeStr)
+      if (isNaN(d)) {
+        d = new Date((timeStr || '').replace(' ', 'T'))
+        if (isNaN(d)) return ''
+      }
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   }
 }
@@ -388,4 +434,49 @@ export default {
 .max-width-50 { max-width: 50%; }
 .card-body[style*="height: 500px"]::-webkit-scrollbar { width: 6px; }
 .card-body[style*="height: 500px"]::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+
+/* 消息气泡样式 */
+.message-bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  display: inline-block;
+  max-width: 40ch;  
+  width: auto;
+  white-space: normal; 
+  overflow-wrap: break-word; 
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  line-height: 1.35;
+  font-size: 0.95rem;
+}
+
+/* 对方消息（左侧） */
+.message-bubble--other {
+  background: #f1f3f5;
+  color: #212529;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+/* 我发送的消息（右侧） */
+.message-bubble--me {
+  background: #900023;
+  color: #fff;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  align-self: flex-end;
+}
+
+/* 时间戳样式 */
+.msg-time {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
 </style>

@@ -88,18 +88,24 @@ export const useChatStore = defineStore('chat', {
     },
 
     // 将会话标记已读（未读置零），并把 messages 标记为 is_read=true
-    markSessionRead(conversationId) {
-      const s = this.sessions.find(s => s.id === conversationId)
+    markSessionRead(conversationIdRaw) {
+      if (!conversationIdRaw) return
+      const conversationId = String(conversationIdRaw)
+      // 标记 messages 中为已读
+      if (this.messages && this.messages[conversationId]) {
+        this.messages[conversationId] = this.messages[conversationId].map(m => {
+          return Object.assign({}, m, { is_read: true })
+        })
+      }
+      // 更新 sessions 中的 unreadCount
+      const s = this.sessions.find(s =>
+        (s.conversationId && String(s.conversationId) === conversationId) ||
+        (s.id && String(s.id) === conversationId)
+      )
       if (s) s.unreadCount = 0
-
-      const msgs = this.messages[conversationId]
-      if (Array.isArray(msgs)) {
-        for (const m of msgs) {
-          // 只把发给当前用户的消息标为已读
-          if (m.to_user_id == this.getCurrentUserId()) {
-            m.is_read = true
-          }
-        }
+      // 如果 activeSessionId 不一致，保证同步
+      if (String(this.activeSessionId) !== conversationId) {
+        this.activeSessionId = conversationId
       }
     },
 

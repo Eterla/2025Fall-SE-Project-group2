@@ -18,32 +18,28 @@
 
     <!-- 消息列表 -->
     <div class="list-group" v-if="!loading && conversations.length > 0">
-      <!-- 单个聊天会话 -->
       <div 
         class="list-group-item list-group-item-action d-flex gap-3 p-3 cursor-pointer"
         v-for="conv in conversations" 
-        :key="conv.other_user_id"
-        @click="goToChat(conv.other_user_id, conv.item_id)"
+        :key="conv.conversationId ?? conv.id ?? `${conv.other_user_id}_${conv.item_id}`"
+        @click="goToChat(conv.other_user_id ?? conv.otherUserId, conv.item_id ?? conv.itemId)"
       >
-        <!-- 对方头像（用用户名首字母） -->
-        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
-          {{ conv.other_username.charAt(0).toUpperCase() }}
+        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;">
+          {{ (conv.other_username ?? conv.otherUsername ?? '用户').charAt(0).toUpperCase() }}
         </div>
 
-        <!-- 消息内容 -->
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex justify-content-between align-items-center mb-1">
-            <h6 class="mb-0">{{ conv.other_username }}</h6>
-            <small class="text-muted">{{ formatTime(conv.last_time) }}</small>
+            <h6 class="mb-0">{{ conv.other_username ?? conv.otherUsername ?? ('用户' + (conv.other_user_id ?? conv.otherUserId)) }}</h6>
+            <small class="text-muted">{{ formatTime(conv.last_message_time ?? conv.lastMessageTime) }}</small>
           </div>
-          <p class="mb-0 text-truncate">
-            {{ conv.last_sender === 'me' ? '我：' : '' }}{{ conv.last_content }}
+          <p class="mb-0 text-truncate message-preview">
+            {{ conv.last_message_content ?? conv.lastMessage ?? '' }}
           </p>
         </div>
 
-        <!-- 未读消息提示 -->
-        <span v-if="conv.unread_count > 0" class="badge bg-danger align-self-start">
-          {{ conv.unread_count }}
+        <span v-if="(conv.unreadCount ?? conv.unread_count ?? 0) > 0" class="badge bg-danger align-self-start">
+          {{ conv.unreadCount ?? conv.unread_count ?? 0 }}
         </span>
       </div>
     </div>
@@ -52,41 +48,97 @@
 
 <script>
 import axios from '@/axios'
+import socketService from '@/services/SocketService'
+import { useChatStore } from '@/stores/chat'
 
 export default {
   data() {
     return {
       loading: true,               // 加载状态
-      conversations: []            // 消息会话列表
+    }
+  },
+  computed: {
+    chatStore() { return useChatStore() },
+    // 直接使用 store.sessions，保证 UI 随 store 更新而更新
+    conversations() {
+      return this.chatStore.sessions
     }
   },
   created() {
     // 页面加载时获取消息列表
     this.getConversations();
+    socketService.onNewMessage(this._onSocketNewMessage);
+  },
+  beforeUnmount() {
+    socketService.offNewMessage(this._onSocketNewMessage);
   },
   methods: {
     // 获取消息会话列表
     async getConversations() {
       try {
-        // 调用后端接口获取消息列表
-        const response = await axios.get('/messages/conversations');
-        console.log('获取消息列表响应：', response);
-        if (response.ok) {
-          this.conversations = response.data;
-        } else {
-          alert(response.error || '获取消息列表失败');
-        }
-      } catch (error) {
-        console.error('获取消息列表失败:', error);
+        const response = await axios.get('/messages/conversations')
+        console.log('获取消息列表响应 yuiinbee：', response)
+        if (response && response.ok) {
+          const rawList = Array.isArray(response.data) ? response.data : (response.data.data ?? response.data)
+          const unread = 0
+          if (Array.isArray(rawList)) {
+            rawList.forEach(s => {
+              const normalized = {
+                conversationId: s.conversation_id ?? s.conversationId ?? s.id ?? null,
+                id: s.id ?? s.conversation_id ?? null,
+                other_user_id: s.other_user_id ?? s.otherUserId ?? null,
+                other_username: s.other_username ?? '',
+                item_id: s.item_id ?? null,
+                last_message_content: s.last_message_content ?? '',
+                last_message_time: s.last_message_time ?? null,
+                unreadCount: unread
+              }
+              this.chatStore.upsertSession(normalized)
+            })
+          }
+        } 
+      } catch (err) {
+        console.error('获取消息列表失败:', err)
       } finally {
-        this.loading = false;
+        this.loading = false
+      }
+    },
+    
+
+    _onSocketNewMessage(payload) {
+      // payload 应包含 conversation_id 与消息内容
+      try {
+        this.chatStore.addMessage(payload)
+      } catch (e) {
+        console.error('_onSocketNewMessage error', e)
       }
     },
 
-    // 格式化时间（简化版）
     formatTime(timeStr) {
-      // 实际项目中可根据需要格式化（如：今天/昨天/具体日期）
-      return timeStr;
+      if (!timeStr) return ''
+      // 兼容 "YYYY-MM-DD HH:MM:SS" 和 ISO
+      let d = new Date(timeStr)
+      if (isNaN(d)) {
+        d = new Date(timeStr.replace(' ', 'T'))
+        if (isNaN(d)) return timeStr
+      }
+
+      const now = new Date()
+      const dateOnly = dt => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+      const diffDays = Math.round((dateOnly(d) - dateOnly(now)) / (24 * 60 * 60 * 1000))
+      const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+      if (diffDays === 0) return `今天 ${timePart}`
+      if (diffDays === -1) return `昨天 ${timePart}`
+      if (diffDays === 1) return `明天 ${timePart}`
+
+      if (d.getFullYear() === now.getFullYear()) {
+        return `${d.getMonth() + 1}月${d.getDate()}日 ${timePart}`
+      }
+      // 不同年份使用完整日期
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${d.getFullYear()}-${mm}-${dd} ${timePart}`
     },
 
     // 进入与该用户的聊天界面
@@ -112,5 +164,14 @@ export default {
 /* 消息列表项悬停效果 */
 .list-group-item:hover {
   background-color: #f8f9fa;
+}
+
+/* 消息预览文本溢出处理 */
+.message-preview {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #777d83;
+  font-size: 14px;
 }
 </style>

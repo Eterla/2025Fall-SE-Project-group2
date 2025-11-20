@@ -378,5 +378,5 @@ outputs/
 tmp/
 .DS_Store
 .vscode/
-
+static/
 Boyamarket/

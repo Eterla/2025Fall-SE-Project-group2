@@ -13,7 +13,7 @@
     <!-- 没有消息时显示 -->
     <div v-if="!loading && conversations.length === 0" class="text-center py-5">
       <p class="text-muted">你还没有任何消息</p>
-      <router-link to="/" class="btn btn-primary">去逛逛</router-link>
+      <router-link to="/" class="btn btn-red">去逛逛</router-link>
     </div>
 
     <!-- 消息列表 -->
@@ -26,7 +26,7 @@
         @click="goToChat(conv.other_user_id, conv.last_item_id)"
       >
         <!-- 对方头像（用用户名首字母） -->
-        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
+        <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
           {{ conv.other_username.charAt(0).toUpperCase() }}
         </div>
 

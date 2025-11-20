@@ -9,7 +9,7 @@
         </button>
         
         <!-- 对方头像和名称 -->
-        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+        <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
           {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
         </div>
         <div>
@@ -28,7 +28,7 @@
         <div class="d-flex flex-column gap-3">
           <!-- 对方发送的消息（循环过滤后的数组） -->
           <div class="d-flex align-items-end gap-2" v-for="msg in otherMessages" :key="msg.id">
-            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
+            <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
               {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
             </div>
             <div>
@@ -42,7 +42,7 @@
           <!-- 自己发送的消息（循环过滤后的数组） -->
           <div class="d-flex align-items-end justify-content-end gap-2" v-for="msg in myMessages" :key="msg.id">
             <div class="text-end">
-              <div class="bg-primary text-white p-2 rounded rounded-end-0 max-width-50">
+              <div class="bg-red text-white p-2 rounded rounded-end-0 max-width-50">
                 {{ msg.content }}
               </div>
               <small class="text-muted me-2">{{ formatTime(msg.created_at) }}</small>
@@ -68,7 +68,7 @@
           ></textarea>
           <button 
             type="submit" 
-            class="btn btn-primary" 
+            class="btn btn-red" 
             :disabled="!messageContent.trim() || sending"
             style="white-space: nowrap;"
           >

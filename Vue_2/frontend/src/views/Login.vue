@@ -43,6 +43,8 @@
 <script>
 // 导入axios（必须添加，否则无法发送请求）
 import api from '@/axios'
+import socketService from '@/services/SocketService'
+import { useChatStore } from '@/stores/chat'
 
 export default {
   data() {
@@ -66,6 +68,21 @@ export default {
           localStorage.setItem('access_token', response.data.access_token);
           localStorage.setItem('user_info', JSON.stringify(response.data.user));
           console.log('login successful, token and user info saved.');
+          
+          // 连接 websocket
+          socketService.connect(response.data.access_token)
+
+          // 注册一个新消息监听器
+          socketService.onNewMessage((msg) => {
+            console.log('收到 new_message', msg)
+            const chatStore = useChatStore()
+            chatStore.addMessage(msg.data)
+          })
+
+          // 注册一个监听正在输入事件的示例
+          socketService.onUserTyping((data) => {
+            console.log('收到 user_typing', data)
+          })
           // 登录成功后跳转到首页
           await this.$router.push('/');
           // 刷新页面让全局状态生效（可选）

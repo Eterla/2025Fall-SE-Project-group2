@@ -90,6 +90,8 @@
 <script>
 import axios from '@/axios'
 import dayjs from '@/utils/dayjs-plugins.js'
+import socketService from '@/services/SocketService'
+import { useChatStore } from '@/stores/chat'
 console.log('dayjs 是否加载成功:', typeof dayjs === 'function' ? '是' : '否', dayjs)
 
 export default {
@@ -213,14 +215,47 @@ if (rawTime) {
     },
 
     // 跳转到聊天页面
-    goToChat() {
+    async goToChat() {
+      const chatStore = useChatStore()
+      const otherUserId = this.item.seller_id
+      const itemId = this.item.id
+
+      // 1) 先尝试从后端获取该会话（如果后端存在会话或会话创建逻辑，会返回 conversation_id）
+      let conversationId = null
+      try {
+        // 后端已约定的接口：GET /messages/conversations/{other_user_id}/{item_id}
+        const resp = await axios.get(`/messages/conversations/${otherUserId}/${itemId}`)
+        console.log('获取会话响应：', resp)
+        const msgs = resp.data
+        conversationId = msgs[14].conversation_id
+      } catch (err) {
+        console.warn('尝试获取会话失败，将使用本地生成的 conversationId 作为回退：', err)
+      }
+
+      console.log("gotochat got conversationId:", conversationId)
+      // 3) 在 store 中确保有会话条目（便于会话列表显示）
+      chatStore.upsertSession({
+        id: conversationId,
+        other_user_id: otherUserId,
+        other_username: this.item.seller_name || `用户${otherUserId}`,
+        item_id: itemId,
+        lastMessage: '',
+        unreadCount: 0
+      })
+
+      // 4) 连接 socket（若未连接）并告诉后端 join room
+      const token = localStorage.getItem('access_token')
+      socketService.connect(token)
+      socketService.joinConversation(conversationId)
+      console.log("SocketService: joined conversation", conversationId)
+      // 5) 设置为 active，会自动清未读
+      chatStore.setActiveSession(conversationId)
+      console.log("ChatStore: set active session", conversationId)
+      // 6) 跳转到聊天详情页（携带 conversationId 以便 ChatDetail 可直接使用）
       this.$router.push({
         name: 'ChatDetail',
-        params: {
-          otherUserId: this.item.seller_id,
-          itemId: this.item.id
-        }
-      });
+        params: { otherUserId: otherUserId, itemId: itemId, conversationId: conversationId }
+      })
     }
   }
 }

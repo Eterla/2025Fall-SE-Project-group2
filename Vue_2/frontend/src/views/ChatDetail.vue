@@ -5,7 +5,7 @@
       <div class="card-body d-flex align-items-center gap-3">
         <!-- return to messages -->
         <button class="btn btn-outline-secondary" @click="$router.push('/messages')">
-          <i class="bi bi-arrow-left"></i>
+          <i class="bi bi-arrow-left-short"></i>
         </button>
 
         <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
@@ -380,7 +380,7 @@ export default {
             this.chatStore.setActiveSession(this.conversationId)
             socketService.joinConversation(this.conversationId)
           }
-          this.chatStore.markSessionRead(this.conversationId)
+
           socketService.sendTyping({
             user_id: Number(this.currentUserId),
             to_user_id: Number(this.otherUserId),
@@ -389,7 +389,7 @@ export default {
           })
 
           this.chatStore.addMessage(msg)
-
+          this.chatStore.markSessionRead(this.conversationId)
           this.messageContent = ''
           this.isScrolledUp = false
           this.newlyArrived = 0
@@ -413,7 +413,6 @@ export default {
 
 <style>
 .max-width-50 { max-width: 50%; }
-
 /* wrapper：非滚动定位容器 */
 .chat-scroll-wrapper {
   position: relative;

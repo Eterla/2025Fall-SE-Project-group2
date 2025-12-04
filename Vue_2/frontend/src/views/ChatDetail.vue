@@ -35,6 +35,11 @@
               :ref="el => setMessageRef(el, msg.id)"
               :class="['flex-column', 'w-100']"
             >
+              <!-- 时间分隔（每隔 1 分钟显示一次时间） -->
+              <div v-if="shouldShowTimeSeparator(index)" class="time-separator text-center my-2">
+                <span class="time-separator-text">{{ formatTimeShort(msg.created_at) }}</span>
+              </div>
+
               <!-- 未读分隔线：在第一条未读消息前插入 -->
               <div
                 v-if="index === firstUnreadIndex"
@@ -54,7 +59,6 @@
               >
                 <div :class="['message-bubble', msg.from_user_id === currentUserId ? 'message-bubble--me' : 'message-bubble--other']">
                   {{ msg.content }}
-                  <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
                 </div>
               </div>
             </div>
@@ -71,9 +75,7 @@
         </div>
       </div>
 
-      <!-- 当用户往上滚动离开底部，但对方仍在输入时，悬浮显示 typing 气泡
-           注意：这个元素现在是 chat-scroll-wrapper 的子元素（wrapper 非滚动容器），
-           因此不会随消息内容滚动而被隐藏/移动 -->
+      <!-- 当用户往上滚动离开底部，但对方仍在输入时，悬浮显示 typing 气泡 -->
       <div
         v-if="typingNotice && isScrolledUp"
         class="typing-indicator-floating"
@@ -87,7 +89,6 @@
     </div>
 
     <!-- “跳到最新”按钮（当不在底部且有未读/新消息时显示） -->
-    <!-- 不是碰到聊天窗口的时候才会显示，没碰到的时候收到新消息了就得显示 -->
     <button v-if="showNewButton" class="btn btn-red btn-info position-fixed" style="right:16px; bottom:86px; z-index:1000;" @click="jumpToLatest">
       新消息 {{ newCount > 0 ? '(' + newCount + ')' : '' }}
     </button>
@@ -404,9 +405,45 @@ export default {
       }
     },
 
-    formatTime(timeStr) {
-      return new Date(timeStr).toLocaleTimeString()
-    }
+    // 显示时间分隔的判断：第一条或与上一条消息时间间隔 >= 60s
+    shouldShowTimeSeparator(index) {
+      const msgs = this.messages
+      if (!msgs || msgs.length === 0) return false
+      if (index === 0) return true
+      const cur = new Date(msgs[index].created_at).getTime()
+      const prev = new Date(msgs[index - 1].created_at).getTime()
+      return (cur - prev) >= 60 * 1000 // 60 秒
+    },
+
+    // 格式化为 HH:MM（短时间）
+    // 如果不是今天的消息，显示 MM月DD日 HH:MM
+    // 如果不是同年份，显示 YYYY-MM-DD HH:MM
+    formatTimeShort(timeStr) {
+      const d = new Date(timeStr)
+      const now = new Date()
+      const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+      const options = { hour: '2-digit', minute: '2-digit' }
+      if (!isToday) {
+        options.month = '2-digit'
+        options.day = '2-digit'
+      }
+      if (d.getFullYear() !== now.getFullYear()) {
+        options.year = 'numeric'
+      }
+      // 自定义格式
+      let formatted = ''
+      if (options.year) {
+        formatted += `${d.getFullYear()}年`
+      }
+      if (options.month) {
+        formatted += `${String(d.getMonth() + 1).padStart(2, '0')}月`
+      }
+      if (options.day) {
+        formatted += `${String(d.getDate()).padStart(2, '0')}日 `
+      }
+      formatted += d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      return formatted.trim()
+    },
   }
 }
 </script>
@@ -422,6 +459,19 @@ export default {
 .chat-scroll-card {
   /* 保持 overflow 在这个元素上 */
   overflow-y: auto;
+}
+
+/* 时间分隔样式 */
+.time-separator {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+.time-separator-text {
+  display: inline-block;
+  background: rgba(0,0,0,0.04);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
 }
 
 /* 消息气泡样式 */
@@ -460,12 +510,9 @@ export default {
   align-self: flex-end;
 }
 
-/* 时间戳样式 */
+/* 时间戳样式（已移除单条时间显示） */
 .msg-time {
-  display: block;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  opacity: 0.8;
+  display: none;
 }
 
 /* 未读分隔线 */
@@ -487,7 +534,7 @@ export default {
 }
 
 /* 输入状态：浮动显示（当用户滚到上方时） */
-/* 现在这个元素在 wrapper（非滚动容器）里，所以不会随内容滚动 */
+/* 现在这个元素在 wrapper（非滚动容器）里，所以不会随内容滚 */
 .typing-indicator-floating {
   position: absolute;
   left: 50%;

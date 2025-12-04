@@ -90,8 +90,8 @@
 <script>
 import axios from '@/axios'
 import dayjs from '@/utils/dayjs-plugins.js'
-import socketService from '@/services/SocketService'
-import { useChatStore } from '@/stores/chat'
+// import socketService from '@/services/SocketService'
+// import { useChatStore } from '@/stores/chat'
 console.log('dayjs 是否加载成功:', typeof dayjs === 'function' ? '是' : '否', dayjs)
 
 export default {
@@ -125,43 +125,42 @@ async getItemDetail() {
       alert('获取商品失败（无商品数据）');
       return;
     }
-const rawTime = respData.createdAt || respData.created_at;
-let formattedTime = '暂无时间';
-if (rawTime) {
-  try {
-    // 直接按本地时区（北京时间）解析
-    const dayjsObj = dayjs(rawTime);
-    if (dayjsObj.isValid()) {
-      // 格式化成本地时间字符串
-      formattedTime = dayjsObj.format('YYYY-MM-DD HH:mm:ss');
-      console.log('最终显示时间:', formattedTime); // 应该和 rawTime 一致
-    } else {
-      formattedTime = '时间格式无效';
+    const rawTime = respData.createdAt || respData.created_at;
+    let formattedTime = '暂无时间';
+    if (rawTime) {
+      try {
+        // 直接按本地时区（北京时间）解析
+        const dayjsObj = dayjs(rawTime);
+        if (dayjsObj.isValid()) {
+          // 格式化成本地时间字符串
+          formattedTime = dayjsObj.format('YYYY-MM-DD HH:mm:ss');
+          console.log('最终显示时间:', formattedTime); // 应该和 rawTime 一致
+        } else {
+          formattedTime = '时间格式无效';
+        }
+      } catch (error) {
+        console.error('时间处理报错:', error);
+        formattedTime = '时间解析失败';
+      }
     }
-  } catch (error) {
-    console.error('时间处理报错:', error);
-    formattedTime = '时间解析失败';
-  }
-}
-
 
     // 规范化字段名（保持原逻辑）
     const normalized = {
       ...respData,
-      imagePath: respData.imagePath || respData.image_path || '',
+      imagePath: respData.image_path || '',
       //createdAt: respData.createdAt || respData.created_at || '',
       createdAt: formattedTime,
-      id: respData.id || respData.item_id || respData.itemId || null,
-      seller_id: respData.seller_id || respData.sellerId || respData.seller || null,
-      seller_name: respData.seller_name || respData.sellerName || '',
+      id: respData.id,
+      seller_id: respData.seller_id,
+      seller_name: respData.seller_name,
       tags: Array.isArray(respData.tags)
         ? respData.tags
-        : (typeof respData.tags === 'string' ? respData.tags.split(/[\s,;，,]+/).map(s => s.trim()).filter(Boolean) : [])
+        : (typeof respData.tags === 'string' ? respData.tags.split(/[\s,;，]+/).map(s => s.trim()).filter(Boolean) : [])
     };
 
     this.item = normalized;
     // 直接从响应数据中获取收藏状态
-    this.isFavorite = !!respData.is_favorite || !!respData.isFavorite;
+    this.isFavorite = !!respData.is_favorite;
 
     console.log('解析后的 item:', this.item, 'isFavorite:', this.isFavorite);
   } catch (error) {
@@ -216,46 +215,26 @@ if (rawTime) {
 
     // 跳转到聊天页面
     async goToChat() {
-      const chatStore = useChatStore()
+      // const chatStore = useChatStore()
       const otherUserId = this.item.seller_id
       const itemId = this.item.id
-
-      // 1) 先尝试从后端获取该会话（如果后端存在会话或会话创建逻辑，会返回 conversation_id）
-      let conversationId = null
+      
       try {
-        // 后端已约定的接口：GET /messages/conversations/{other_user_id}/{item_id}
-        const resp = await axios.get(`/messages/conversations/${otherUserId}/${itemId}`)
-        console.log('获取会话响应：', resp)
-        const msgs = resp.data
-        conversationId = msgs[14].conversation_id
-      } catch (err) {
-        console.warn('尝试获取会话失败，将使用本地生成的 conversationId 作为回退：', err)
+        const resp = await axios.post('/messages', {
+          to_user_id: otherUserId,
+          item_id: itemId,
+          content: '你好！我对这个商品感兴趣'  // 发送消息以创建会话
+        })
+        console.log("ItemDetail, goToChat response:", resp)
+
+      } catch (error) {
+        console.error('创建或获取会话失败:', error)
+      } finally {
+        this.$router.push({
+          name: 'ChatDetail',
+          params: { otherUserId: otherUserId, itemId: itemId }
+        })
       }
-
-      console.log("gotochat got conversationId:", conversationId)
-      // 3) 在 store 中确保有会话条目（便于会话列表显示）
-      chatStore.upsertSession({
-        id: conversationId,
-        other_user_id: otherUserId,
-        other_username: this.item.seller_name || `用户${otherUserId}`,
-        item_id: itemId,
-        lastMessage: '',
-        unreadCount: 0
-      })
-
-      // 4) 连接 socket（若未连接）并告诉后端 join room
-      const token = localStorage.getItem('access_token')
-      socketService.connect(token)
-      socketService.joinConversation(conversationId)
-      console.log("SocketService: joined conversation", conversationId)
-      // 5) 设置为 active，会自动清未读
-      chatStore.setActiveSession(conversationId)
-      console.log("ChatStore: set active session", conversationId)
-      // 6) 跳转到聊天详情页（携带 conversationId 以便 ChatDetail 可直接使用）
-      this.$router.push({
-        name: 'ChatDetail',
-        params: { otherUserId: otherUserId, itemId: itemId, conversationId: conversationId }
-      })
     }
   }
 }

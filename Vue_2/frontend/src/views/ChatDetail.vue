@@ -3,8 +3,9 @@
     <!-- 聊天头部（显示对方信息和商品） -->
     <div class="card mb-3">
       <div class="card-body d-flex align-items-center gap-3">
-        <button class="btn btn-outline-secondary" @click="$router.go(-1)">
-          <i class="bi bi-arrow-left"></i>
+        <!-- return to messages -->
+        <button class="btn btn-outline-secondary" @click="$router.push('/messages')">
+          <i class="bi bi-arrow-left-short"></i>
         </button>
 
         <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
@@ -19,49 +20,76 @@
       </div>
     </div>
 
-    <!-- 聊天消息区域 -->
-    <div class="card mb-3" style="height: 500px; overflow-y: auto;" ref="scrollContainer" @scroll="onScroll">
-      <div class="card-body p-4">
-        <!-- 消息列表：按时间排序后一次性循环 -->
-        <div class="d-flex flex-column gap-3">
-          <template v-for="(msg, idx) in sortedMessages" :key="msg.id">
-            <!-- 在第一条未读消息之前渲染未读分隔条 -->
-            <div v-if="idx === firstUnreadIndex" class="text-center my-1">
-              <span class="badge bg-info text-dark">最新消息</span>
-            </div>
-
-            <!-- 非我发出的消息 -->
-            <div v-if="msg.from_user_id !== currentUserId" class="d-flex align-items-end gap-2">
-              <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
-                {{ otherUserInfo.username?.charAt(0).toUpperCase() }}
+    <!-- 聊天消息区域：增加一个 wrapper，把可滚动区域和悬浮 typing 气泡分开 -->
+    <div class="chat-scroll-wrapper mb-3 position-relative">
+      <div class="card chat-scroll-card" style="height: 500px; overflow-y: auto;" ref="scrollContainer" @scroll="onScroll">
+        <div class="card-body p-4">
+          <!-- 消息内容：展示给用户最新的消息 -->
+          <div v-if="loading" class="text-center text-muted my-5">
+            加载中...
+          </div>
+          <div v-else>
+            <div 
+              v-for="(msg, index) in messages" 
+              :key="msg.id" 
+              :ref="el => setMessageRef(el, msg.id)"
+              :class="['flex-column', 'w-100']"
+            >
+              <!-- 时间分隔（每隔 1 分钟显示一次时间） -->
+              <div v-if="shouldShowTimeSeparator(index)" class="time-separator text-center my-2">
+                <span class="time-separator-text">{{ formatTimeShort(msg.created_at) }}</span>
               </div>
-              <div>
-                <div class="message-bubble message-bubble--other">
+
+              <!-- 未读分隔线：在第一条未读消息前插入 -->
+              <div
+                v-if="index === firstUnreadIndex"
+                class="unread-separator d-flex align-items-center my-2"
+              >
+                <span class="unread-separator-line flex-grow-1"></span>
+                <span class="unread-separator-text mx-2">以下为新消息</span>
+                <span class="unread-separator-line flex-grow-1"></span>
+              </div>
+
+              <div
+                :class="[
+                  'd-flex',
+                  msg.from_user_id === currentUserId ? 'justify-content-end' : 'justify-content-start',
+                  'mb-3'
+                ]"
+              >
+                <div :class="['message-bubble', msg.from_user_id === currentUserId ? 'message-bubble--me' : 'message-bubble--other']">
                   {{ msg.content }}
                 </div>
-                <small class="text-muted ms-2">{{ formatTime(msg.created_at) }}</small>
               </div>
             </div>
 
-            <!-- 我发送的消息 -->
-            <div v-else class="d-flex align-items-end justify-content-end gap-2">
-              <div class="text-end">
-                <div class="message-bubble message-bubble--me">
-                  {{ msg.content }}
-                </div>
-                <small class="text-muted me-2">{{ formatTime(msg.created_at) }}</small>
-              </div>
-              <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; flex-shrink: 0;">
-                {{ currentUserInfo.username?.charAt(0).toUpperCase() }}
+            <!-- 对方正在输入：在底部且接近最新时，内联显示 -->
+            <div v-if="typingNotice && !isScrolledUp" class="typing-indicator-inline d-flex justify-content-start mb-2">
+              <div class="message-bubble message-bubble--other typing-bubble">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
               </div>
             </div>
-          </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- 当用户往上滚动离开底部，但对方仍在输入时，悬浮显示 typing 气泡 -->
+      <div
+        v-if="typingNotice && isScrolledUp"
+        class="typing-indicator-floating"
+      >
+        <div class="message-bubble message-bubble--other typing-bubble">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
         </div>
       </div>
     </div>
 
     <!-- “跳到最新”按钮（当不在底部且有未读/新消息时显示） -->
-    <button v-if="showNewButton" class="btn btn-sm btn-info position-fixed" style="right:16px; bottom:86px; z-index:1000;" @click="jumpToLatest">
+    <button v-if="showNewButton" class="btn btn-red btn-info position-fixed" style="right:16px; bottom:86px; z-index:1000;" @click="jumpToLatest">
       新消息 {{ newCount > 0 ? '(' + newCount + ')' : '' }}
     </button>
 
@@ -88,7 +116,6 @@
             发送
           </button>
         </form>
-        <div v-if="typingNotice" class="mt-2 text-muted">{{ typingNotice }}</div>
       </div>
     </div>
   </div>
@@ -104,107 +131,73 @@ export default {
     return {
       otherUserId: this.$route.params.otherUserId,
       itemId: this.$route.params.itemId,
-      conversationId: this.$route.params.conversationId || null,
+      conversationId: null,
+
       messageContent: '',
       currentUserId: null,
       currentUserInfo: {},
-      otherUserInfo: {},
+      otherUserInfo: { username: null },
       relatedItem: {},
+
       messageRefs: {},
+
       loading: true,
       sending: false,
-      isScrolledUp: false, // 是否从底部向上滚动（用于显示“新消息”按钮）
-      newlyArrived: 0 // 记录非活跃时到达的新消息数量
+
+      isScrolledUp: false,
+      newlyArrived: 0
     }
   },
   computed: {
     chatStore() { return useChatStore() },
-    messages() { return this.chatStore.getMessages(this.conversationId) || [] },
-    sortedMessages() {
-      return (this.messages || []).slice().sort((a, b) => {
-        const ta = a && a.created_at ? new Date(a.created_at).getTime() : 0
-        const tb = b && b.created_at ? new Date(b.created_at).getTime() : 0
-        return ta - tb
-      })
+    messages() {
+      const list = this.chatStore.getMessages(this.conversationId) || []
+      const sorted = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      const MAX_VISIBLE = 50
+      return sorted.length > MAX_VISIBLE ? sorted.slice(sorted.length - MAX_VISIBLE) : sorted
     },
-    // 找到第一条未读（发给我的且 is_read === false）
     firstUnreadIndex() {
       const me = this.chatStore.getCurrentUserId()
-      const arr = this.sortedMessages
+      const arr = this.messages
       return arr.findIndex(m => m.to_user_id == me && !m.is_read)
     },
     typingNotice() {
-      const t = (this.chatStore.typing && this.chatStore.typing[this.conversationId]) || {}
-      const otherTyping = Object.keys(t || {}).find(uid => Number(uid) !== Number(this.currentUserId) && t[uid])
-      return otherTyping ? '对方正在输入...' : ''
+      const typingObj = this.chatStore.typing || {}
+      const itemTyping = typingObj[this.itemId] || {}
+      return itemTyping[this.otherUserId] || false
     },
-    // 计算未读数（可用于显示角标）
     newCount() {
-      // count messages that are to me and not read
       const me = this.chatStore.getCurrentUserId()
-      return (this.messages || []).filter(m => m.to_user_id == me && !m.is_read).length
+      const arr = this.messages
+      const count = arr.filter(m => m.to_user_id == me && !m.is_read).length
+      return count
     },
     showNewButton() {
-      // 当不在底部且有未读或刚到达的新消息时显示按钮
       return this.isScrolledUp && (this.newCount > 0 || this.newlyArrived > 0)
     }
   },
   created() {
     this.initUserInfo()
     this.getRelatedItem()
-
-    const fallbackConv = `${Math.min(Number(this.currentUserId || 0), Number(this.otherUserId || 0))}_${this.itemId}`
-
     this.getHistoryMessages().then(() => {
-      if (!this.conversationId) {
-        this.conversationId = String(fallbackConv)
-      }
       this.chatStore.setActiveSession(this.conversationId)
       const token = localStorage.getItem('access_token')
       socketService.connect(token)
       socketService.joinConversation(this.conversationId)
+
+      this._onUserTyping = this._onUserTyping.bind(this)
       socketService.onUserTyping(this._onUserTyping)
-
-      // 监听 socket 的 new_message 并处理 UI 行为（计数/滚动）
-      this._onNewMessage = (payload) => {
-        // payload included conversation_id per API
-        if (String(payload.conversation_id) !== String(this.conversationId)) return
-        // add to store (SocketService may already do this; safe to call)
-        this.chatStore.addMessage(payload)
-
-        // 如果当前视图在底部（isScrolledUp === false），直接滚到底部并标为已读
-        if (!this.isScrolledUp) {
-          // 确保消息可见
-          this.$nextTick(() => this.scrollToElement(null))
-          // 标记为已读（并置 unreadCount=0）
-          this.chatStore.markSessionRead(this.conversationId)
-          // 可选：同步到后端标记已读（如后端支持），例如：
-          // axios.post(`/messages/conversations/${this.conversationId}/read`).catch(()=>{})
-        } else {
-          // 用户不在底部，增加未查看的新消息计数（显示按钮）
-          this.newlyArrived += 1
-        }
-      }
+      this._onNewMessage = this._onNewMessage.bind(this)
       socketService.onNewMessage(this._onNewMessage)
     })
   },
+
   beforeUnmount() {
     if (this.conversationId) {
       socketService.leaveConversation(this.conversationId)
     }
     socketService.offUserTyping(this._onUserTyping)
     socketService.offNewMessage(this._onNewMessage)
-    const container = this.$refs.scrollContainer
-    if (container && container.removeEventListener) container.removeEventListener('scroll', this.onScroll)
-  },
-  mounted() {
-    // 如果 template 使用 ref scrollContainer，则 mounted 时可直接绑定滚动事件（防止事件绑定时容器还未存在）
-    const container = this.$refs.scrollContainer
-    if (container) {
-      container.addEventListener('scroll', this.onScroll, { passive: true })
-      // 初始化是否在底部
-      this.onScroll()
-    }
   },
   methods: {
     initUserInfo() {
@@ -215,7 +208,6 @@ export default {
         this.currentUserInfo = {}
         this.currentUserId = null
       }
-      this.otherUserInfo = { username: `用户${this.otherUserId}` }
     },
 
     async getRelatedItem() {
@@ -232,12 +224,17 @@ export default {
     async getHistoryMessages() {
       try {
         const resp = await axios.get(`/messages/conversations/${this.otherUserId}/${this.itemId}`)
-        const payload = resp && resp.data ? (resp.data.data ?? resp.data) : null
+        const payload = resp && resp.data ? resp.data : null
         if (Array.isArray(payload)) {
           const messages = payload
           if (messages.length > 0) {
             if (messages[0].conversation_id) {
               this.conversationId = String(messages[0].conversation_id)
+            }
+            if (Number(this.otherUserId) === Number(messages[0].from_user_id)) {
+              this.otherUserInfo.username = messages[0].from_username
+            } else {
+              this.otherUserInfo.username = messages[0].to_username
             }
             messages.forEach(m => this.chatStore.addMessage(m))
           }
@@ -261,27 +258,35 @@ export default {
     },
 
     async _onUserTyping(data) {
-      const conv = data && data.conversation_id ? String(data.conversation_id) : this.conversationId
-      if (!conv) return
-      this.chatStore.setTyping(conv, Number(data.user_id), !!data.is_typing)
+      this.chatStore.setTyping(data.user_id, data.item_id, !!data.is_typing)
     },
 
-    // 当滚动时检测是否在底部
+    async _onNewMessage(payload) {
+      const msg = payload && payload.data ? payload.data : null
+      if (!msg) return
+      const convId = msg.conversation_id ? String(msg.conversation_id) : null
+      if (convId !== this.conversationId) return
+
+      this.chatStore.addMessage(msg)
+
+      if (!this.isScrolledUp) {
+        this.$nextTick(() => this.scrollToElement(null))
+      } else {
+        this.newlyArrived += 1
+      }
+    },
+
     onScroll() {
       const container = this.$refs.scrollContainer
       if (!container) return
-      const threshold = 60 // 距底部多少 px 视为“在底部”
+      const threshold = 5
       const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight
       const wasScrolledUp = this.isScrolledUp
       this.isScrolledUp = distanceToBottom > threshold
 
-      // 如果用户刚滚到底部（isScrolledUp 从 true -> false），把 newlyArrived 清零并标为已读
       if (wasScrolledUp && !this.isScrolledUp) {
         if (this.newlyArrived > 0) {
-          // 将到达但未查看的消息标为已读
           this.chatStore.markSessionRead(this.conversationId)
-          // 可向后端同步已读
-          // axios.post(`/messages/conversations/${this.conversationId}/read`).catch(()=>{})
         }
         this.newlyArrived = 0
       }
@@ -297,11 +302,10 @@ export default {
       }
     },
 
-    // 点击跳转到第一条未读或底部
     jumpToLatest() {
       const idx = this.firstUnreadIndex
       if (idx !== -1) {
-        const msgs = this.sortedMessages
+        const msgs = this.messages
         const target = msgs[idx]
         const el = target && this.messageRefs[String(target.id)]
         if (el) {
@@ -312,18 +316,16 @@ export default {
       } else {
         this.scrollToElement(null)
       }
-      // 进入后把未读置零
       this.chatStore.markSessionRead(this.conversationId)
       this.newlyArrived = 0
     },
 
-    // 滚动操作（可传 element 或 null）
     scrollToElement(el) {
       if (el && typeof el.scrollIntoView === 'function') {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
       } else {
         this.$nextTick(() => {
-          const container = this.$el.querySelector('.card-body[style*="height: 500px"]')
+          const container = this.$refs.scrollContainer
           if (container) {
             container.scrollTop = container.scrollHeight
           }
@@ -338,7 +340,7 @@ export default {
         return
       }
       const unread = this.newCount
-      const msgs = this.sortedMessages || []
+      const msgs = this.messages
       if (unread > 0 && msgs.length > 0) {
         const idx = Math.max(0, msgs.length - unread)
         const target = msgs[idx]
@@ -362,6 +364,7 @@ export default {
     async sendMessage() {
       const content = this.messageContent.trim()
       if (!content) return
+
       this.sending = true
       try {
         const resp = await axios.post('/messages', {
@@ -369,14 +372,28 @@ export default {
           item_id: this.itemId,
           content
         })
+
         if (resp && resp.ok) {
-          if (resp.data && resp.data.conversation_id) {
-            this.conversationId = String(resp.data.conversation_id)
+          const msg = resp.data || {}
+
+          if (msg.conversation_id && !this.conversationId) {
+            this.conversationId = String(msg.conversation_id)
             this.chatStore.setActiveSession(this.conversationId)
             socketService.joinConversation(this.conversationId)
           }
-          this.chatStore.addMessage(resp.data)
+
+          socketService.sendTyping({
+            user_id: Number(this.currentUserId),
+            to_user_id: Number(this.otherUserId),
+            item_id: Number(this.itemId),
+            is_typing: false
+          })
+
+          this.chatStore.addMessage(msg)
+          this.chatStore.markSessionRead(this.conversationId)
           this.messageContent = ''
+          this.isScrolledUp = false
+          this.newlyArrived = 0
           this.$nextTick(() => this.scrollToElement(null))
         } else {
           alert((resp && resp.error && resp.error.message) || '发送失败')
@@ -388,17 +405,74 @@ export default {
       }
     },
 
-    formatTime(timeStr) {
-      return new Date(timeStr).toLocaleTimeString()
-    }
+    // 显示时间分隔的判断：第一条或与上一条消息时间间隔 >= 60s
+    shouldShowTimeSeparator(index) {
+      const msgs = this.messages
+      if (!msgs || msgs.length === 0) return false
+      if (index === 0) return true
+      const cur = new Date(msgs[index].created_at).getTime()
+      const prev = new Date(msgs[index - 1].created_at).getTime()
+      return (cur - prev) >= 60 * 1000 // 60 秒
+    },
+
+    // 格式化为 HH:MM（短时间）
+    // 如果不是今天的消息，显示 MM月DD日 HH:MM
+    // 如果不是同年份，显示 YYYY-MM-DD HH:MM
+    formatTimeShort(timeStr) {
+      const d = new Date(timeStr)
+      const now = new Date()
+      const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+      const options = { hour: '2-digit', minute: '2-digit' }
+      if (!isToday) {
+        options.month = '2-digit'
+        options.day = '2-digit'
+      }
+      if (d.getFullYear() !== now.getFullYear()) {
+        options.year = 'numeric'
+      }
+      // 自定义格式
+      let formatted = ''
+      if (options.year) {
+        formatted += `${d.getFullYear()}年`
+      }
+      if (options.month) {
+        formatted += `${String(d.getMonth() + 1).padStart(2, '0')}月`
+      }
+      if (options.day) {
+        formatted += `${String(d.getDate()).padStart(2, '0')}日 `
+      }
+      formatted += d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      return formatted.trim()
+    },
   }
 }
 </script>
 
 <style>
 .max-width-50 { max-width: 50%; }
-.card-body[style*="height: 500px"]::-webkit-scrollbar { width: 6px; }
-.card-body[style*="height: 500px"]::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+/* wrapper：非滚动定位容器 */
+.chat-scroll-wrapper {
+  position: relative;
+}
+
+/* 消息卡片（实际可滚动区域） */
+.chat-scroll-card {
+  /* 保持 overflow 在这个元素上 */
+  overflow-y: auto;
+}
+
+/* 时间分隔样式 */
+.time-separator {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+.time-separator-text {
+  display: inline-block;
+  background: rgba(0,0,0,0.04);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
 
 /* 消息气泡样式 */
 .message-bubble {
@@ -436,11 +510,74 @@ export default {
   align-self: flex-end;
 }
 
-/* 时间戳样式 */
+/* 时间戳样式（已移除单条时间显示） */
 .msg-time {
-  display: block;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  opacity: 0.8;
+  display: none;
+}
+
+/* 未读分隔线 */
+.unread-separator {
+  font-size: 0.8rem;
+  color: #868e96;
+}
+.unread-separator-line {
+  height: 1px;
+  background-color: #dee2e6;
+}
+.unread-separator-text {
+  white-space: nowrap;
+}
+
+/* 输入状态：内联显示（在消息列表底部） */
+.typing-indicator-inline {
+  padding-left: 0.25rem;
+}
+
+/* 输入状态：浮动显示（当用户滚到上方时） */
+/* 现在这个元素在 wrapper（非滚动容器）里，所以不会随内容滚 */
+.typing-indicator-floating {
+  position: absolute;
+  left: 50%;
+  bottom: 12px; /* 靠近聊天窗口底部但不覆盖输入区域（如需调整请改这个值） */
+  transform: translateX(-50%);
+  z-index: 900;
+  pointer-events: none; /* 不拦截点击事件 */
+}
+
+/* 三个跳动的点 */
+.typing-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.typing-bubble .dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  margin: 0 2px;
+  animation: typing-bounce 1s infinite ease-in-out;
+  opacity: 0.6;
+}
+
+.typing-bubble .dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-bubble .dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 </style>

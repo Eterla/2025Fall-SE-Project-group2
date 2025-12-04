@@ -21,6 +21,7 @@ export default {
 <style>
 /* 引入 Bootstrap 样式 */
 @import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 
 /* 复制 base.html 中的自定义样式 */
 .item-card {

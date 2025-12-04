@@ -254,7 +254,11 @@ export default {
           if (messages.length > 0) {
             if (messages[0].conversation_id) {
               this.conversationId = String(messages[0].conversation_id) // 确定 conversationId  
-              this.otherUserInfo.username = messages[0].to_username     // 确定对方用户名
+            }
+            if (Number(this.otherUserId) === Number(messages[0].from_user_id)) {
+              this.otherUserInfo.username = messages[0].from_username
+            } else {
+              this.otherUserInfo.username = messages[0].to_username
             }
             // 将消息添加到 store
             messages.forEach(m => this.chatStore.addMessage(m))

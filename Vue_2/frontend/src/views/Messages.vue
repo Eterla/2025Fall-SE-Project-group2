@@ -52,6 +52,8 @@
 
 <script>
 import axios from '@/axios'
+// import { useChatStore } from '@/stores/chat'
+
 
 export default {
   data() {
@@ -70,7 +72,7 @@ export default {
       try {
         // 调用后端接口获取消息列表
         const response = await axios.get('/messages/conversations');
-        console.log('获取消息列表响应：', response);
+        console.log('Messages/getConversations:', response);
         if (response.ok) {
           this.conversations = response.data;
         } else {

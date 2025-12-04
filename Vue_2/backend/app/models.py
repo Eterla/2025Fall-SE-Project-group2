@@ -531,4 +531,6 @@ class Message:
                 'to_username': msg['to_username']
             })
         
+        print(f"conversation ID : {messages[0]['conversation_id'] if messages else 'N/A'} between user {user_id} and user {other_user_id} about item {item_id} has {len(result)} messages.")
+
         return result

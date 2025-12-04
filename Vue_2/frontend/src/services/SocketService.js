@@ -43,8 +43,8 @@ class SocketService {
             // user_typing -> 更新 typing 状态
             this.socket.on('user_typing', (payload) => {
                 // payload: { user_id, item_id, is_typing } （后端目前约定如此）
-                const convId = payload.conversation_id || `${Math.min(payload.user_id, payload.other_user_id)}_${Math.max(payload.user_id, payload.other_user_id)}`
-                chatStore.setTyping(convId, payload.user_id, !!payload.is_typing)
+                console.log('socket user_typing', payload)
+                chatStore.setTyping(payload.user_id, payload.item_id,!!payload.is_typing)
             })
 
             // 绑定此前 pending 注册的事件
@@ -84,17 +84,18 @@ class SocketService {
     }
 
     // 通用 emit 方法（安全检查）
-    emit(event, data, ack) {
+    emit(event, data) {
         if (!this.socket) {
             console.warn('SocketService.emit: socket not connected yet')
             return
         }
-        this.socket.emit(event, data, ack)
+        this.socket.emit(event, data)
     }
 
     // 通用 on 方法（若尚未连接，先缓存）
     on(event, callback) {
         if (this.socket && this.connected) {
+            console.log("SocketService.on: registering event", event, callback);
             this.socket.on(event, callback)
         } else {
             this._pendingOn.push([event, callback])
@@ -122,11 +123,13 @@ class SocketService {
 
     // 发送正在输入状态
     sendTyping(payload) { 
+        console.log("Sending typing payload:", payload)
         this.emit('typing', payload) 
     }
 
     // 监听用户正在输入状态
     onUserTyping(callback) { 
+        console.log("Registering onUserTyping callback", callback);
         this.on('user_typing', callback) 
     }
 

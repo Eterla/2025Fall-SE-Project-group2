@@ -287,6 +287,7 @@ export default {
       if (wasScrolledUp && !this.isScrolledUp) {
         if (this.newlyArrived > 0) {
           this.chatStore.markSessionRead(this.conversationId)
+          this.markMessageRead(); 
         }
         this.newlyArrived = 0
       }
@@ -443,6 +444,26 @@ export default {
       }
       formatted += d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       return formatted.trim()
+    },
+
+    async markMessageRead() {
+      const msgs = this.messages
+      const me = this.chatStore.getCurrentUserId()
+      const unreadMsgs = msgs.filter(m => m.to_user_id == me && !m.is_read)
+      for (const msg of unreadMsgs) {
+        await this.markSingleMessageRead(msg.id)
+      }
+    },
+    async markSingleMessageRead(messageId) {
+      try {
+        await axios.post(`/messages/conversations`, {
+          id: messageId, 
+          conversation_id: this.conversationId,
+          is_read: true
+        })
+      } catch (e) {
+        console.error('mark read failed', e)
+      }
     },
   }
 }

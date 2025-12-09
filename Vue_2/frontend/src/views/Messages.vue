@@ -52,7 +52,7 @@
 
 <script>
 import axios from '@/axios'
-// import { useChatStore } from '@/stores/chat'
+import socketService from '@/services/SocketService'
 
 
 export default {
@@ -65,6 +65,12 @@ export default {
   created() {
     // 页面加载时获取消息列表
     this.getConversations();
+    // socketService.connect(/);
+    this._onNewMessage = (message) => {
+      console.log('Messages.vue received new message:', message);
+      this.getConversations(); // 收到新消息时刷新会话列表
+    };
+    socketService.on('new_message', this._onNewMessage);
   },
   methods: {
     // 获取消息会话列表

@@ -675,3 +675,17 @@
   - 401 Unauthorized: 未认证
   - 404 Not Found: 商品不存在, 用户不存在
   - 500 服务器内部错误
+
+### 发送消息已读状态
+- URL:`/messeges/conversations`
+- 方法: `POST`
+- 认证: 需要
+- 成功响应 (200 OK):
+  ```json
+  {
+    "id": "integer",
+    "conversation_id": "integer",
+    "is_read": "boolean",
+  }
+  ```
+- 错误响应: 

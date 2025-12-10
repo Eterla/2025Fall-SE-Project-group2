@@ -82,8 +82,8 @@ def item_detail(item_id):
     # 检查是否已收藏
     is_favorite = False
 
-    # if 'user_id' in session:
-    #     is_favorite = Favorite.is_favorite(session['user_id'], item_id)
+    if 'user_id' in session:
+        is_favorite = Favorite.is_favorite(session['user_id'], item_id)
     
     return jsonify({
         "ok": True,

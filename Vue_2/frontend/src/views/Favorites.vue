@@ -31,7 +31,7 @@
 
           <!-- 商品图片 -->
           <img 
-            :src="item.imagePath ? `/images/${item.imagePath}` : '/images/default.jpg'" 
+            :src="item.image_path ? '/' + item.image_path.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')" 
             class="card-img-top item-image" 
             :alt="item.title"
           >
@@ -45,7 +45,7 @@
               </span>
             </p>
             <p class="card-text text-muted" style="font-size: 0.9rem;">
-              卖家：{{ item.seller.username }}
+              卖家：{{item.seller?.username}}
             </p>
             <router-link :to="`/item/${item.id}`" class="btn btn-red w-100">查看详情</router-link>
           </div>

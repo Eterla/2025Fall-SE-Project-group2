@@ -124,7 +124,7 @@ class Item:
             logger.debug(f'query is required: {query}')
             items = conn.execute(
                 """SELECT items.*
-                   FORM items
+                   FROM items
                    WHERE items.status = 'available' AND 
                    (items.title LIKE ? OR items.description LIKE ? OR items.tags LIKE ?)
                    ORDER BY items.created_at DESC""",

@@ -61,6 +61,13 @@
                   {{ msg.content }}
                 </div>
               </div>
+
+              <!-- 新消息分界线：当用户在上方滚动且有新消息到达时，在边界后显示 -->
+              <div v-if="newMessageBoundaryId && String(msg.id) === String(newMessageBoundaryId)" class="unread-separator d-flex align-items-center my-2">
+                <span class="unread-separator-line flex-grow-1"></span>
+                <span class="unread-separator-text mx-2">新消息</span>
+                <span class="unread-separator-line flex-grow-1"></span>
+              </div>
             </div>
 
             <!-- 对方正在输入：在底部且接近最新时，内联显示 -->
@@ -146,7 +153,8 @@ export default {
       sending: false,
 
       isScrolledUp: false,
-      newlyArrived: 0
+      newlyArrived: 0,
+      newMessageBoundaryId: null
     }
   },
   computed: {
@@ -182,6 +190,9 @@ export default {
     this.getRelatedItem()
     this.getHistoryMessages().then(() => {
       this.chatStore.setActiveSession(this.conversationId)
+      this.chatStore.markSessionRead(this.conversationId)
+      this.markMessageRead()
+      
       const token = localStorage.getItem('access_token')
       socketService.connect(token)
       socketService.joinConversation(this.conversationId)
@@ -194,9 +205,23 @@ export default {
   },
 
   beforeUnmount() {
-    if (this.conversationId) {
-      socketService.leaveConversation(this.conversationId)
+    // Mark session read and notify backend before leaving the chat view so the
+    // Messages list reflects accurate unread counts.
+    try {
+      if (this.conversationId) {
+        // locally mark read
+        this.chatStore.markSessionRead(this.conversationId)
+        // notify backend that messages were read
+        this.markMessageRead().catch(err => console.warn('markMessageRead failed on beforeUnmount', err))
+        // leave socket room
+        socketService.leaveConversation(this.conversationId)
+        // clear active session in store
+        this.chatStore.setActiveSession(null)
+      }
+    } catch (e) {
+      console.warn('beforeUnmount cleanup error', e)
     }
+
     socketService.offUserTyping(this._onUserTyping)
     socketService.offNewMessage(this._onNewMessage)
   },
@@ -237,6 +262,10 @@ export default {
             } else {
               this.otherUserInfo.username = messages[0].to_username
             }
+            // Important: set active session and mark as read BEFORE adding history
+            // so history messages won't be treated as new/unread by addMessage
+            this.chatStore.setActiveSession(this.conversationId)
+            this.chatStore.markSessionRead(this.conversationId)
             messages.forEach(m => this.chatStore.addMessage(m))
           }
         }
@@ -266,10 +295,25 @@ export default {
     },
 
     async _onNewMessage(payload) {
-      const msg = payload && payload.data ? payload.data : null
+      // SocketService emits the message object directly (payload === message),
+      // but some places may wrap it as { data: message } — support both.
+      const msg = (payload && payload.data) ? payload.data : payload || null
       if (!msg) return
       const convId = msg.conversation_id ? String(msg.conversation_id) : null
       if (convId !== this.conversationId) return
+      console.log('[ChatDetail] _onNewMessage received', { convId, isScrolledUp: this.isScrolledUp, newMessageBoundaryId: this.newMessageBoundaryId })
+
+      // If user has scrolled up (not at bottom), mark a boundary so we can show a
+      // "新消息" separator in the list and display the jump button.
+      if (this.isScrolledUp) {
+        // set boundary to current last message id (before adding the new one)
+        const msgs = this.messages || []
+        const last = msgs.length ? msgs[msgs.length - 1] : null
+        if (last && !this.newMessageBoundaryId) {
+          this.newMessageBoundaryId = String(last.id)
+          console.log('[ChatDetail] set newMessageBoundaryId =', this.newMessageBoundaryId)
+        }
+      }
 
       this.chatStore.addMessage(msg)
 
@@ -277,6 +321,7 @@ export default {
         this.$nextTick(() => this.scrollToElement(null))
       } else {
         this.newlyArrived += 1
+        console.log('[ChatDetail] newlyArrived ->', this.newlyArrived)
       }
     },
 
@@ -308,6 +353,7 @@ export default {
     },
 
     jumpToLatest() {
+      console.log('[ChatDetail] jumpToLatest called')
       const idx = this.firstUnreadIndex
       if (idx !== -1) {
         const msgs = this.messages
@@ -323,6 +369,7 @@ export default {
       }
       this.chatStore.markSessionRead(this.conversationId)
       this.newlyArrived = 0
+      // keep newMessageBoundaryId until user actively sends a message
     },
 
     scrollToElement(el) {
@@ -399,6 +446,8 @@ export default {
           this.messageContent = ''
           this.isScrolledUp = false
           this.newlyArrived = 0
+          // user sent a message -> clear the new-message boundary
+          this.newMessageBoundaryId = null
           this.$nextTick(() => {
             this.scrollToElement(null)
             this.focusMessageInput()

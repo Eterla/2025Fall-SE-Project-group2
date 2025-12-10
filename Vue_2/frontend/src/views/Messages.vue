@@ -53,6 +53,7 @@
 <script>
 import axios from '@/axios'
 import socketService from '@/services/SocketService'
+import { useChatStore } from '@/stores/chat'
 
 
 export default {
@@ -75,12 +76,28 @@ export default {
   methods: {
     // 获取消息会话列表
     async getConversations() {
+      const chatStore = useChatStore()
+      console.log("Messages.vue fetching conversations, current chatStore.sessions:", chatStore.sessions)
       try {
         // 调用后端接口获取消息列表
         const response = await axios.get('/messages/conversations');
         console.log('Messages/getConversations:', response);
         if (response.ok) {
-          this.conversations = response.data;
+          const data = response.data;
+          this.conversations = data;
+          // 更新 Pinia store 中的会话数据
+          const mapped = data.map(conv => {
+            return {
+              id: conv.conversation_id,
+              other_user_id: conv.other_user_id, 
+              other_username: conv.other_username,
+              item_id: conv.item_id,
+              last_message_time: conv.last_message_time,
+              last_message_content: conv.last_message_content,
+              unreadCount: conv.unread_count
+            }
+          })
+          chatStore.sessions = mapped
         } else {
           alert(response.error || '获取消息列表失败');
         }

@@ -24,7 +24,10 @@
             <router-link class="nav-link text-white font-weight-normal px-3" to="/favorites">我的收藏</router-link>
           </li>
           <li class="nav-item" v-if="isLogin">
-            <router-link class="nav-link text-white font-weight-normal px-3" to="/messages">消息</router-link>
+            <router-link class="nav-link text-white font-weight-normal px-3 position-relative" to="/messages">
+              消息
+              <span v-if="unreadCount > 0" class="unread-badge" :data-count="unreadCount>99 ? '99plus' : ''">{{ unreadCount>99 ? '99+' : unreadCount }}</span>
+            </router-link>
           </li>
           <li class="nav-item" v-if="isLogin">
             <router-link class="nav-link text-white font-weight-normal px-3" to="/user-center">个人中心</router-link>
@@ -35,7 +38,7 @@
         <div class="d-flex align-items-center gap-2">
           <span class="navbar-text me-2 text-white d-none d-sm-block" v-if="isLogin">欢迎, {{ username }}</span>
           <router-link class="btn btn-sm btn-outline-light" to="/logout" v-if="isLogin">退出</router-link>
-          
+
           <router-link class="btn btn-sm btn-outline-light" to="/login" v-if="!isLogin">登录</router-link>
           <router-link class="btn btn-sm btn-light text-nav-bg" to="/register" v-if="!isLogin">注册</router-link>
         </div>
@@ -45,11 +48,21 @@
 </template>
 
 <script>
+import { useChatStore } from '@/stores/chat'
+
 export default {
   data() {
     return {
       isLogin: false,
       username: ''
+    }
+  },
+  computed: {
+    // 直接从 Pinia store 读取响应式的 totalUnread getter
+    unreadCount() {
+      const store = useChatStore()
+      console.log("Navbar.vue unreadCount:", store.totalUnread)
+      return Number(store.totalUnread || 0)
     }
   },
   mounted() {
@@ -59,6 +72,8 @@ export default {
     // 监听登录状态变化
     window.addEventListener('storage', this.checkLoginStatus)
     window.addEventListener('login-status-changed', this.checkLoginStatus)
+    // 触发一次以确保 store 已被初始化
+    useChatStore()
   },
   beforeUnmount() {
     // 清理事件监听
@@ -85,7 +100,6 @@ export default {
     }
   },
   watch: {
-    // 监听路由变化，确保登录状态实时更新
     $route() {
       this.checkLoginStatus()
     }
@@ -122,4 +136,51 @@ export default {
       margin-bottom: 0.5rem;
     }
   }
+
+  /* unread badge：小白点，内部红色数字，定位到消息链接右上角 */
+  .nav-link.position-relative { 
+    position: relative;
+  } 
+
+  .unread-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;               /* 两位数时可扩展宽度 */
+    background: #ffffff;          /* 白色圆点背景 */
+    color: #900023;               /* 红色数字 */
+    font-weight: 700;
+    font-size: 0.65rem;
+    border-radius: 999px;         /* 完全圆形 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.06);
+    line-height: 1;
+    text-align: center;
+    pointer-events: none;         /* 不阻塞点击消息链接 */
+    transform: translate(0, 0);
+    z-index: 10;
+  }
+
+  /* 当显示 "99+" 时，内容由模板直接渲染，无需 ::after */
+  .unread-badge[data-count="99plus"] {
+    padding: 0 6px;
+  }
+
+  @media (max-width: 575.98px) {
+    .unread-badge {
+      min-width: 16px;
+      height: 16px;
+      font-size: 0.6rem;
+      top: 3px;
+      right: 3px;
+      padding: 0 4px;
+    }
+  }
+
 </style>

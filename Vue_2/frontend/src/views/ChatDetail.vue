@@ -105,6 +105,7 @@
             placeholder="输入消息..."
             rows="2"
             :disabled="sending"
+            ref="messageInput"
           ></textarea>
           <button 
             type="submit" 
@@ -243,7 +244,10 @@ export default {
         console.error('getHistoryMessages error', e)
       } finally {
         this.loading = false
-        this.$nextTick(() => this.scrollToFirstUnread())
+        this.$nextTick(() => {
+          this.scrollToFirstUnread()
+          this.focusMessageInput()
+        })
       }
     },
 
@@ -395,7 +399,10 @@ export default {
           this.messageContent = ''
           this.isScrolledUp = false
           this.newlyArrived = 0
-          this.$nextTick(() => this.scrollToElement(null))
+          this.$nextTick(() => {
+            this.scrollToElement(null)
+            this.focusMessageInput()
+          })
         } else {
           alert((resp && resp.error && resp.error.message) || '发送失败')
         }
@@ -403,6 +410,13 @@ export default {
         console.error('send failed', e)
       } finally {
         this.sending = false
+      }
+    },
+
+    focusMessageInput() {
+      const input = this.$refs.messageInput
+      if (input && typeof input.focus === 'function') {
+        input.focus()
       }
     },
 

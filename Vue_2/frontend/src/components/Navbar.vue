@@ -49,6 +49,8 @@
 
 <script>
 import { useChatStore } from '@/stores/chat'
+import socketService from '@/services/SocketService'
+import axios from '@/axios'
 
 export default {
   data() {
@@ -73,7 +75,13 @@ export default {
     window.addEventListener('storage', this.checkLoginStatus)
     window.addEventListener('login-status-changed', this.checkLoginStatus)
     // 触发一次以确保 store 已被初始化
-    useChatStore()
+    // 如果已登录，提前拉取会话数据以便在其他页面（比如首页）显示未读数
+    const store = useChatStore()
+    if (localStorage.getItem('access_token')) {
+      this.loadConversations(store)
+      // 也可以尝试建立 socket 连接以接收实时消息（若后端支持 token auth）
+      try { socketService.connect(localStorage.getItem('access_token')) } catch (e) { console.warn('socket connect failed', e) }
+    }
   },
   beforeUnmount() {
     // 清理事件监听
@@ -81,6 +89,26 @@ export default {
     window.removeEventListener('login-status-changed', this.checkLoginStatus)
   },
   methods: {
+    async loadConversations(store) {
+      try {
+        const res = await axios.get('/messages/conversations')
+        if (res && res.ok) {
+          const data = res.data
+          const mapped = data.map(conv => ({
+            id: conv.conversation_id,
+            other_user_id: conv.other_user_id,
+            other_username: conv.other_username,
+            item_id: conv.item_id,
+            last_message_time: conv.last_message_time,
+            last_message_content: conv.last_message_content,
+            unreadCount: conv.unread_count
+          }))
+          store.sessions = mapped
+        }
+      } catch (e) {
+        console.warn('Navbar: loadConversations failed', e)
+      }
+    },
     checkLoginStatus() {
       // 从 localStorage 读取登录状态（修改为与 Login.vue 一致的 key）
       const token = localStorage.getItem('access_token')  // 改为 access_token
@@ -96,6 +124,15 @@ export default {
         }
       } else {
         this.username = ''
+      }
+      // 若刚刚登录，确保拉取会话以更新未读数
+      if (this.isLogin) {
+        try {
+          const store = useChatStore()
+          this.loadConversations(store)
+        } catch (e) {
+          console.warn('Navbar: loadConversations on login failed', e)
+        }
       }
     }
   },

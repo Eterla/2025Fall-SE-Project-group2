@@ -94,15 +94,19 @@ class Item:
             # 保存图片
             upload_folder = os.path.join(current_app.root_path, 'static/images')
             os.makedirs(upload_folder, exist_ok=True)
-            
             # 生成唯一文件名
             ext = secure_filename(image.filename).split('.')[-1]
             filename = f"{uuid.uuid4()}.{ext}"
             image_path = os.path.join('images', filename)
-            
             # 保存文件
             image.save(os.path.join(upload_folder, filename))
-        
+        # Version2: integrate AI tags auto generate function:
+        auto_tags = AI_interface.generate_tags(existing_tags=tags, img_path=os.path.join(upload_folder, filename) if image else None)
+
+        # >>>TODO>>>: **Notice: 当前逻辑是直接替换掉原有的tags从而最小程度的减小对其他部分code的改动，但是效果并不一定理想**
+        tags = auto_tags[:255] # ensure tags length limit to 255 characters
+        # <<<TODO<<<  后续确定了修改逻辑之后删除这些多余的Annotations
+
         cursor = conn.cursor()
         # using user_id to get seller_name:
         user = User.find_by_id(user_id)
@@ -544,7 +548,9 @@ class AI_interface:
         logger.warning("AI_interface: is initialized, notice that AI_interface now is a static placeholder class, so ensure that it's neccessary to instantiate it!")
     @staticmethod
     def generate_tags(existing_tags, img_path=None):
+        # TODO: implement the hyperparameters to self class private members if necessary, [API-KEY, model_name, tags_scale, etc.]
         GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+        MODEL_NAME = 'gemini-2.5-flash'  # placeholder for future use
         if GEMINI_API_KEY is None:
             logger.error("AI_interface: generate_tags is called without GEMINI_API_KEY environment variable set, so it will not work as expected!")
             return existing_tags
@@ -557,14 +563,33 @@ class AI_interface:
             logger.info(f"AI_interface: generate_tags is called with image input: {img_path}")
             logger.warning("AI_interface: generate_tags with image input is not implemented yet!")
             pass
-        tag_generate_prompt = "Here are some tags for an item: " + existing_tags + ". Generate more tags for this item, so that it can be found more easily in tag-based search results."
-        
+        tag_generate_prompt = \
+        """
+            You are an expert tag generator for online marketplace items. Given the existing tags for an item and the image of it(if given), generate additional relevant and specific tags that accurately describe the item to improve its discoverability.
+            the generagted tags should be concise, relevant, and separated by a single space. And Notice that the tags could be in 中文 or English, it would be better if you can mix them properly according to the item type.
+            because the tags will be used in an online marketplace platform, please ensure they are appropriate and useful for potential buyers searching for items.
+            Here are some simplified rules to follow:(critical)
+                1. Relevance: don't generate too much irrelevant tags, focus on the item's main features.
+                2. Put the most promising and important tags at the beginning of your output, the less similar to the existing tags or item image, the later they should be placed into the tag list.
+                3. Uniqueness: don't generate duplicate tags that have been already put into the generated tag list.
+                4. the order need: Besides the rule2, also consider the different languages' tags order, e.g. 中文 tags should be placed before English tag.
+                5. maybe some tags discribe the same concept but in different languages or formats, e.g. "笔记本电脑", "笔电", and "laptop", they all should be keeped, but must to Notice:
+                    this is one of the most important rules: 'Keep the similar semantic tags in different languages or formats, but just put one of them at the prior list, the others should be put to the last to the list.'
+                    This approach maximizes product search hit rates while preventing the tag list from appearing redundant. And since tags are displayed in a specific order, users typically only view the first few tags. Therefore, tags with identical meanings should be avoided appearing together at the front of the list. These other semantically similar auxiliary tags can be placed later to serve a supplementary function.
+            example: 
+                Existing tags: "银白色MacbookPro, 二手"
+                Generated tags: "MacBookPro14英寸 二手 轻薄本 银白色 高性能 办公笔电 设计师电脑 laptop notebook silver-color used ......"
+            Now, generate additional tags based on the following existing tags and image:
+            Existing tags: {existing_tags}
+        """.format(existing_tags=existing_tags)
+
         def gemini2_generate(api_key: str, prompt: str, json_output=True, img_path: str= None):
-            model_name = 'gemini-3-flash'
+            model_name = MODEL_NAME
             time_retry = 0
             from google import genai
             from google.genai import types
             if img_path is None:
+                logger.info("gemini2_generate: Generating tags without image input.")
                 while time_retry <= 3:
                     try:
                         client = genai.Client(api_key=api_key)
@@ -584,6 +609,7 @@ class AI_interface:
                         logger.error(f"gemini2_generate: Encountered error during generation without image: {e}, retry times: {time_retry}")
                         continue
             else:
+                logger.info("gemini2_generate: Generating tags with image input.")
                 with open(img_path, 'rb') as f:
                     image_bytes = f.read()
                 response = None
@@ -610,8 +636,8 @@ class AI_interface:
                         logger.error(f"gemini2_generate: Encountered error during generation with image: {e}, retry times: {time_retry}")
                         continue
             
-        curr_text = gemini2_generate(api_key=os.getenv("GEMINI_API_KEY"), prompt=tag_generate_prompt, img_path=img_path)
-        # TODO: process the curr_text and existing_tags, and unique them, return the final tags
+        curr_text = gemini2_generate(api_key=GEMINI_API_KEY, prompt=tag_generate_prompt, img_path=img_path)
+        # TODO: process the curr_text and existing_tags, and unique them, return the final tags, Maybe extract this function to a new number function in AI_interface class
         if curr_text is None:
             logger.error("AI_interface: generate_tags failed to get response from gemini2_generate, returning existing tags.")
             return existing_tags
@@ -619,6 +645,13 @@ class AI_interface:
             logger.info("AI_interface: generate_tags successfully got response from gemini2_generate.")
             return existing_tags + ', ' + curr_text.strip()
     
+    def refine_tagstext2tags(self, tags):
+        # Placeholder for future tag refinement logic
+        # TODO: implement actual refinement logic, possibly using AI, temporarily just do nothing
+        logger.error("AI_interface: refine_tagstext2tags is not implemented yet!")
+        return None
+    
+
 if __name__ == "__main__":
     # for test purpose only
 

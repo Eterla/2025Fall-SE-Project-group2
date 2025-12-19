@@ -11,8 +11,8 @@ import datetime
 import uuid
 from flask import g, current_app
 from werkzeug.utils import secure_filename
-# from .exceptions import UsernameTakenError
-# from app import db
+from .exceptions import UsernameTakenError
+from app import db
 
 
 
@@ -560,7 +560,7 @@ class AI_interface:
         tag_generate_prompt = "Here are some tags for an item: " + existing_tags + ". Generate more tags for this item, so that it can be found more easily in tag-based search results."
         
         def gemini2_generate(api_key: str, prompt: str, json_output=True, img_path: str= None):
-            model_name = 'gemini-2.5-flash'
+            model_name = 'gemini-3-flash'
             time_retry = 0
             from google import genai
             from google.genai import types
@@ -610,7 +610,7 @@ class AI_interface:
                         logger.error(f"gemini2_generate: Encountered error during generation with image: {e}, retry times: {time_retry}")
                         continue
             
-        curr_text = gemini2_generate(api_key='GEMINI_API_KEY', prompt=tag_generate_prompt, img_path=img_path)
+        curr_text = gemini2_generate(api_key=os.getenv("GEMINI_API_KEY"), prompt=tag_generate_prompt, img_path=img_path)
         # TODO: process the curr_text and existing_tags, and unique them, return the final tags
         if curr_text is None:
             logger.error("AI_interface: generate_tags failed to get response from gemini2_generate, returning existing tags.")
@@ -621,6 +621,7 @@ class AI_interface:
     
 if __name__ == "__main__":
     # for test purpose only
+
     ai = AI_interface()
     tags = ai.generate_tags(existing_tags="laptop, electronics, computer", img_path=None)
     print("Generated tags: ", tags)

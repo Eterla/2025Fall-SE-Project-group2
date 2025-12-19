@@ -636,6 +636,7 @@
         "item_id": "integer",
         "item_title": "string",
         "item_image": "string",
+        "item_status": "string", // 这是新的,也可以是bool都行
         "last_message_time": "string",    // 最新一条消息的时间
         "last_message_content": "string", // 最新一条消息的内容
         "unread_count": "integer"
@@ -662,6 +663,7 @@
         "from_user_id": "integer",    //发送方id
         "to_user_id": "integer",      //接受方id
         "item_id": "integer",
+        "item_status": "string", //这也是新的
         "content": "string",
         "is_read": "boolean",
         "created_at": "string",
@@ -675,3 +677,17 @@
   - 401 Unauthorized: 未认证
   - 404 Not Found: 商品不存在, 用户不存在
   - 500 服务器内部错误
+
+### 发送消息已读状态
+- URL:`/messeges/conversations`
+- 方法: `POST`
+- 认证: 需要
+- 成功响应 (200 OK):
+  ```json
+  {
+    "id": "integer",
+    "conversation_id": "integer",
+    "is_read": "boolean",
+  }
+  ```
+- 错误响应: 

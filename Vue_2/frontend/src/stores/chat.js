@@ -37,9 +37,15 @@ export const useChatStore = defineStore('chat', {
   actions: {
     // 打开会话（打开聊天窗口）
     setActiveSession(conversationId) {
-      console.log("setActiveSession:", conversationId)
-      this.activeSessionId = conversationId
-      // this.markSessionRead(conversationId)
+      try {
+        const convId = conversationId == null ? null : String(conversationId)
+        console.log('setActiveSession:', convId)
+        this.activeSessionId = convId
+        // 当设置为 active 时，立即将其标为已读（本地）
+        if (convId) this.markSessionRead(convId)
+      } catch (e) {
+        console.warn('setActiveSession error', e)
+      }
     },
 
     // 清空 store（登出时调用）
@@ -60,74 +66,97 @@ export const useChatStore = defineStore('chat', {
         console.log("upsertSession: adding new session", session)
         this.sessions.unshift(Object.assign({}, session)) // 新会话插入到最前面
       }
+
+      // print
+      console.log("当前 sessions 列表:", this.sessions)
     },
 
     // 添加消息（SocketService 或页面发送/获取历史时调用）
     addMessage(raw) {
-      const conversationId = raw.conversation_id
-      if (!conversationId) return
+      try {
+        // normalize conversation id to string to avoid type mismatches
+        const convIdRaw = raw.conversation_id
+        if (!convIdRaw && convIdRaw !== 0) return
+        const convId = String(convIdRaw)
 
-      const msg = {
-        id: raw.id,
-        conversation_id: conversationId,
-        from_user_id: raw.from_user_id,
-        to_user_id: raw.to_user_id,
-        item_id: raw.item_id,
-        content: raw.content,
-        created_at: raw.created_at,
-        sender_name: raw.from_username ?? '',
-        is_read: raw.is_read ||  (this.activeSessionId === conversationId) 
-      }
-
-      // 确保 messages 数组存在
-      if (!this.messages[conversationId]) {
-        this.messages[conversationId] = []
-      }
-
-      // 去重：如果已有相同 id 则替换
-      const existIdx = this.messages[conversationId].findIndex(m => String(m.id) === String(msg.id))
-      if (existIdx !== -1) {
-        this.messages[conversationId].splice(existIdx, 1, msg)
-      } else {
-        this.messages[conversationId].push(msg)
-      }
-
-      // 更新或创建 session 的 lastMessage & unreadCount
-      let session = this.sessions.find(s => s.id === conversationId)
-      if (session) {
-        session.lastMessage = msg.content
-        // 如果当前不是正在聊天的会话 → 未读+1（且消息是发给我的并未被标记为已读）
-        if (this.activeSessionId !== conversationId && msg.to_user_id == this.getCurrentUserId() && !msg.is_read) {
-          session.unreadCount = (session.unreadCount || 0) + 1
+        const msg = {
+          id: raw.id,
+          conversation_id: convId,
+          from_user_id: raw.from_user_id,
+          to_user_id: raw.to_user_id,
+          item_id: raw.item_id,
+          content: raw.content,
+          created_at: raw.created_at,
+          sender_name: raw.from_username ?? '',
+          // treat message as read when this conversation is active
+          is_read: !!raw.is_read || String(this.activeSessionId) === convId
         }
-      } else {
-        // 新会话入口，unshift 到列表
-        this.sessions.unshift({
-          id: conversationId,
-          other_user_id: msg.from_user_id === Number(this.getCurrentUserId()) ? msg.to_user_id : msg.from_user_id,
-          other_username: msg.sender_name,
-          item_id: msg.item_id,
-          lastMessage: msg.content,
-          unreadCount: (this.activeSessionId === conversationId || msg.is_read) ? 0 : 1
-        })
+
+        // ensure messages array exists under string key
+        if (!this.messages[convId]) {
+          this.messages[convId] = []
+        }
+
+        // dedupe by id
+        const existIdx = this.messages[convId].findIndex(m => String(m.id) === String(msg.id))
+        if (existIdx !== -1) {
+          this.messages[convId].splice(existIdx, 1, msg)
+        } else {
+          this.messages[convId].push(msg)
+        }
+
+        // update or create session
+        let session = this.sessions.find(s => String(s.id) === convId)
+        const currentUserId = this.getCurrentUserId()
+        const shouldCountAsUnread = (msg.to_user_id == currentUserId) && !msg.is_read
+
+        if (session) {
+          session.lastMessage = msg.content
+          // only increment unread when this conversation is NOT active
+          if (String(this.activeSessionId) === convId) {
+            // active session: ensure unread is zero
+            session.unreadCount = 0
+          } else if (shouldCountAsUnread) {
+            session.unreadCount = (session.unreadCount || 0) + 1
+          }
+        } else {
+          // insert new session at front
+          this.sessions.unshift({
+            id: convId,
+            other_user_id: msg.from_user_id === Number(currentUserId) ? msg.to_user_id : msg.from_user_id,
+            other_username: msg.sender_name,
+            item_id: msg.item_id,
+            lastMessage: msg.content,
+            unreadCount: (String(this.activeSessionId) === convId || msg.is_read) ? 0 : (shouldCountAsUnread ? 1 : 0)
+          })
+        }
+        // extra safety: if this conv is active, ensure its session unreadCount remains 0
+        if (String(this.activeSessionId) === convId) {
+          const s2 = this.sessions.find(s => String(s.id) === convId)
+          if (s2) s2.unreadCount = 0
+        }
+      } catch (e) {
+        console.error('addMessage error:', e, 'raw message:', raw)
       }
     },
 
     // 将会话标记已读（未读置零），并把 messages 标记为 is_read=true
     markSessionRead(conversationId) {
-      const s = this.sessions.find(s => s.id === conversationId)
+      const convId = String(conversationId)
+      let s = this.sessions.find(s => String(s.id) === convId)
       if (s) {
-        console.log("markSessionRead for conversationId:", conversationId)
+        console.log('markSessionRead for conversationId:', convId)
         s.unreadCount = 0
       } else {
-        this.upsertSession({ id: conversationId, unreadCount: 0 })
+        this.upsertSession({ id: convId, unreadCount: 0 })
       }
 
-      const msgs = this.messages[conversationId]
+      const msgs = this.messages[convId]
       if (Array.isArray(msgs)) {
+        const currentUserId = this.getCurrentUserId()
         for (const m of msgs) {
-          // 只把发给当前用户的消息标为已读
-          if (m.to_user_id == this.getCurrentUserId()) {
+          // only mark messages sent to current user as read
+          if (m.to_user_id == currentUserId) {
             m.is_read = true
           }
         }
@@ -161,6 +190,7 @@ export const useChatStore = defineStore('chat', {
     },
     // 会话总未读数
     totalUnread: (state) => {
+      console.log("计算 chat.js 里 totalUnread")
       return state.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0)
     }
   }

@@ -54,7 +54,8 @@ def publish():
         price_val = float(price) if price else 0.0
     except ValueError:
         price_val = 0.0
-
+    auto_generate_tags = []  # add auto tags logic here that use AI model
+    
     item_id = Item.publish(session["user_id"], title, description, price_val, tags, image)
     return jsonify({
         "ok": True,

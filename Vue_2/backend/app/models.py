@@ -1,16 +1,19 @@
 # app/models.py
+import os
+import sys
+
 import logging
 import hydra
 logger = logging.getLogger(__name__)
 
 import sqlite3
 import datetime
-import os
 import uuid
 from flask import g, current_app
 from werkzeug.utils import secure_filename
-from .exceptions import UsernameTakenError
-from app import db
+# from .exceptions import UsernameTakenError
+# from app import db
+
 
 
 class User:
@@ -534,3 +537,90 @@ class Message:
         print(f"conversation ID : {messages[0]['conversation_id'] if messages else 'N/A'} between user {user_id} and user {other_user_id} about item {item_id} has {len(result)} messages.")
 
         return result
+
+
+class AI_interface:
+    def __init__(self):
+        logger.warning("AI_interface: is initialized, notice that AI_interface now is a static placeholder class, so ensure that it's neccessary to instantiate it!")
+    @staticmethod
+    def generate_tags(existing_tags, img_path=None):
+        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+        if GEMINI_API_KEY is None:
+            logger.error("AI_interface: generate_tags is called without GEMINI_API_KEY environment variable set, so it will not work as expected!")
+            return existing_tags
+        '''
+        generate_tags's Docs:
+        this method generates additional tags based on existing tags and optional image input.
+        After that, the item will have more comprehensive tags for better search and categorization.
+        '''
+        if img_path is not None:
+            logger.info(f"AI_interface: generate_tags is called with image input: {img_path}")
+            logger.warning("AI_interface: generate_tags with image input is not implemented yet!")
+            pass
+        tag_generate_prompt = "Here are some tags for an item: " + existing_tags + ". Generate more tags for this item, so that it can be found more easily in tag-based search results."
+        
+        def gemini2_generate(api_key: str, prompt: str, json_output=True, img_path: str= None):
+            model_name = 'gemini-2.5-flash'
+            time_retry = 0
+            from google import genai
+            from google.genai import types
+            if img_path is None:
+                while time_retry <= 3:
+                    try:
+                        client = genai.Client(api_key=api_key)
+                        response = client.models.generate_content(
+                            model= model_name,
+                            contents=[
+                                prompt
+                            ]
+                        )
+                        curr_text = response.text
+                        print("Generation is already done!")
+                        print("The raw response text is: ", curr_text)
+                        # pre-deal to ensure the json format
+                        return curr_text
+                    except Exception as e:
+                        time_retry += 1
+                        logger.error(f"gemini2_generate: Encountered error during generation without image: {e}, retry times: {time_retry}")
+                        continue
+            else:
+                with open(img_path, 'rb') as f:
+                    image_bytes = f.read()
+                response = None
+                while time_retry <= 3:
+                    try:
+                        client = genai.Client(api_key=api_key)
+                        response = client.models.generate_content(
+                            model = model_name,
+                            contents=[
+                            types.Part.from_bytes(
+                                data=image_bytes,
+                                mime_type='image/jpeg',
+                            ),
+                            prompt
+                            ]
+                        )
+                        curr_text = response.text
+                        print("Generation is already done!")
+                        print("The raw response text is: ", curr_text)
+                        # pre-deal to ensure the json format
+                        return curr_text
+                    except Exception as e:
+                        time_retry += 1
+                        logger.error(f"gemini2_generate: Encountered error during generation with image: {e}, retry times: {time_retry}")
+                        continue
+            
+        curr_text = gemini2_generate(api_key='GEMINI_API_KEY', prompt=tag_generate_prompt, img_path=img_path)
+        # TODO: process the curr_text and existing_tags, and unique them, return the final tags
+        if curr_text is None:
+            logger.error("AI_interface: generate_tags failed to get response from gemini2_generate, returning existing tags.")
+            return existing_tags
+        else:
+            logger.info("AI_interface: generate_tags successfully got response from gemini2_generate.")
+            return existing_tags + ', ' + curr_text.strip()
+    
+if __name__ == "__main__":
+    # for test purpose only
+    ai = AI_interface()
+    tags = ai.generate_tags(existing_tags="laptop, electronics, computer", img_path=None)
+    print("Generated tags: ", tags)

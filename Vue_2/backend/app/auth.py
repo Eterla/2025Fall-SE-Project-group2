@@ -83,18 +83,20 @@ def register():
     data = request.get_json()
     
     # 验证必填参数
-    if not data or not data.get('username') or not data.get('password'):
+    if not data or not data.get('username') or not data.get('password') or not data.get('email'):
         return jsonify({
             "ok": False,
             "error": {
                 "code": "INVALID_INPUT",
-                "message": "用户名和密码不能为空"
+                "message": "用户名, 密码, 邮箱都不能为空"
             }
         }), 400
         
     username = data.get('username')
     password = data.get('password')
     email = data.get('email', '')
+
+    logger.debug(f"Email received: {email}")
     phone = data.get('phone', '')
     logger.debug(f"Registering user: {username}, password:{password}, email: {email}, phone: {phone}")
 

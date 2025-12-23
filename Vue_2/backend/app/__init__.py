@@ -39,10 +39,10 @@ def create_app(test_config=None):
         pass
 
     # 启用CORS
-    CORS(app, supports_credentials=True, origins="*", async_mode='eventlet')
+    CORS(app, supports_credentials=True, origins="*")
 
     # Init SocketIO（支持跨域）
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
     logger.info("SocketIO初始化完成")
 
     # 初始化数据库

@@ -10,10 +10,15 @@
 <script>
 // 先导入导航栏组件（后面会创建，现在可能报错，暂时忽略）
 import Navbar from './components/Navbar.vue'
+import socketService from '@/services/SocketService'
 
 export default {
   components: {
     Navbar
+  },
+  created() {
+    const token = localStorage.getItem('access_token')
+    socketService.connect(token)
   }
 }
 </script>

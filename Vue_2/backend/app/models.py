@@ -1,7 +1,7 @@
 # app/models.py
 import os
 import sys
-
+from werkzeug.security import check_password_hash
 import logging
 import hydra
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ import datetime
 import uuid
 from flask import g, current_app
 from werkzeug.utils import secure_filename
-from .exceptions import UsernameTakenError
+from .exceptions import UsernameTakenError, InvalidPasswordError
 from app import db
 
 
@@ -30,9 +30,9 @@ class User:
         # 插入新用户
         created_at = datetime.datetime.now()
         cursor.execute("""
-            INSERT INTO users (username, password, email, phone, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (username, password, email, phone, created_at))
+            INSERT INTO users (username, password, email, phone, created_at, avatar_url)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (username, password, email, phone, created_at, None))
         
         user_id = cursor.lastrowid
         conn.commit()
@@ -82,6 +82,100 @@ class User:
                 "created_at": user['created_at']
             }
         return None
+    
+    @staticmethod
+    def update_profile(user_id, username, email):
+        conn = db.get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id))
+        if cursor.fetchone():
+            raise UsernameTakenError()
+        
+        cursor.execute("""
+            UPDATE users 
+            SET username = ?, email = ?
+            WHERE id = ?
+        """, (username, email, user_id))
+
+        conn.commit()
+    
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+    
+        return {
+            "id": user['id'],
+            "username": user['username'],
+            "email": user['email'],
+            "created_at": user['created_at']
+        }
+    
+    @staticmethod
+    def change_password(user_id, old, hashed_new):
+        conn = db.get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT password FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+
+        if not check_password_hash(result['password'], old):
+            raise InvalidPasswordError()
+
+        cursor.execute("""
+            UPDATE users 
+            SET password = ?
+            WHERE id = ?
+        """, (hashed_new, user_id))
+    
+        conn.commit()
+    
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+    
+        return {
+            "id": user['id'],
+            "username": user['username'],
+            "email": user['email'],
+            "created_at": user['created_at']
+        }
+    
+    @staticmethod
+    def upload_avatar(user_id, avatar):
+        avatar_path = None
+        upload_folder = os.path.join(current_app.root_path, 'static/avatars')
+        os.makedirs(upload_folder, exist_ok=True)
+            
+        ext = secure_filename(avatar.filename).split('.')[-1]
+        filename = f"avatar_{user_id}_{uuid.uuid4()}.{ext}"
+        avatar_path = os.path.join('avatars', filename)
+        avatar.save(os.path.join(upload_folder, filename))
+        
+        avatar_url = f"/static/{avatar_path}"
+        
+        conn = db.get_db()
+        cursor = conn.cursor()
+        user = User.find_by_id(user_id)
+        
+        old_avatar_url = user['avatar_url'] if 'avatar_url' in user else None
+        if old_avatar_url:
+            old_path = old_avatar_url.replace('/static/', '')
+            old_full_path = os.path.join(current_app.root_path, 'static', old_path)
+            if os.path.exists(old_full_path):
+                try:
+                    os.remove(old_full_path)
+                except Exception as e:
+                    logger.warning(f"删除旧头像失败: {e}")
+        
+        cursor.execute(
+            """UPDATE users 
+               SET avatar_url = ?
+               WHERE id = ?""",
+            (avatar_url, user_id)
+        )
+        
+        conn.commit()
+
+        return avatar_url
 
 
 class Item:
@@ -249,6 +343,50 @@ class Item:
             return True
         except:
             return False
+    
+    @staticmethod
+    def update_all(item_id, title, description, price, status, tags, image):
+        conn = db.get_db()
+        image_path = None
+        if image:
+            # 保存图片
+            upload_folder = os.path.join(current_app.root_path, 'static/images')
+            os.makedirs(upload_folder, exist_ok=True)
+            # 生成唯一文件名
+            ext = secure_filename(image.filename).split('.')[-1]
+            filename = f"{uuid.uuid4()}.{ext}"
+            image_path = os.path.join('images', filename)
+            # 保存文件
+            image.save(os.path.join(upload_folder, filename))
+        # Version2: integrate AI tags auto generate function:
+        auto_tags = AI_interface.generate_tags(existing_tags=tags, img_path=os.path.join(upload_folder, filename) if image else None)
+
+        # >>>TODO>>>: **Notice: 当前逻辑是直接替换掉原有的tags从而最小程度的减小对其他部分code的改动，但是效果并不一定理想**
+        tags = auto_tags[:255] # ensure tags length limit to 255 characters
+        # <<<TODO<<<  后续确定了修改逻辑之后删除这些多余的Annotations
+
+        # item_id is auto-incremented, so don't need to specify it
+        curr_time = datetime.datetime.now() 
+        # convert time to string for sqlite3 compatibility
+        # And at create time, update time is same as create time, so just use both below
+        curr_time = curr_time.strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+                """UPDATE items 
+                   SET title = ?, description = ?, price = ?, status = ?, tags = ?, updated_at = ?, image_path = ?
+                   WHERE id = ?""",
+                (title, description, price, status, tags, curr_time, image_path, item_id)
+            )
+        conn.commit()
+    
+    @staticmethod
+    def delete(item_id):
+        conn = db.get_db()
+        conn.execute(
+            "DELETE FROM items WHERE id = ?",
+            (item_id,)
+        )
+        conn.commit()
+        return True
 
 class Favorite:
     @staticmethod

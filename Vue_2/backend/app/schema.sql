@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    avatar_url TEXT
 );
 
 -- 商品表

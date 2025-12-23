@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 // 导入你实际的页面组件（文件名与你的 views 文件夹一致）
 import Home from '../views/Home.vue';
 import Login from '../views/Login.vue';
+import EditProfile from '../views/EditProfile.vue';
+import EditItem from '../views/EditItem.vue';
 import Register from '../views/Register.vue';
 import ItemDetail from '../views/ItemDetail.vue';
 import Publish from '../views/Publish.vue';
@@ -24,6 +26,8 @@ const requireAuth = (to, from, next) => {
 const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
+  { path: '/editProfile', name: 'EditProfile', component: EditProfile },
+  { path: '/edit-item/:id', name: 'EditItem', component: EditItem },
   { path: '/logout', name: 'Logout', component: Logout },
   { path: '/register', name: 'Register', component: Register },
   { path: '/item/:id', name: 'ItemDetail', component: ItemDetail },

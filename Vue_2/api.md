@@ -296,6 +296,25 @@
   - 403 Forbidden: 无权操作
   - 404 Not Found: 商品不存在
 
+### 下架商品
+- URL: `/api/items/<int:item_id>/status`
+- 方法: `PATCH`
+- 成功响应 (200 OK):
+  ```json
+  {
+    "ok": true,
+    "data": {
+      "id": "integer",
+      "status": "string"
+    }
+  }
+  ```
+- 错误响应:
+  - 404 ITEM_NOT_FOUNDd: 商品不存在
+  - 403 PERMISSION_DENIED: 无权操作该商品
+  - 400 INVALID_STATUS: 无效的商品状态
+  - 500 服务器内部错误
+
 ## 收藏相关 API
 
 > **BCN! 同样的，所有的favorite相关的api, 后端里其实有一些demo实现(可能是之前ai生成的) 然而由于时间和精力问题, 都没有被检查和测试, 所以有些api可能是work的，有些则可能是没必要的，这一部分如果需求确实存在的话，可能就是接下来前后端工作的一个主要方面了** -----(weizhiyuan)

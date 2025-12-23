@@ -566,9 +566,12 @@ export default {
       try {
         // 这里的 URL 需要你按后端实际实现二选一
         // 方案 A：POST /items/{itemId}/complete
-        const resp = await axios.post(`/items/${this.itemId}/complete`, {
-          other_user_id: Number(this.otherUserId),
-          conversation_id: this.conversationId
+        const resp = await axios.patch(`/items/${this.itemId}/status`, {
+          ok: true,
+          data: {
+            id: Number(this.itemId),
+            status: 'sold'
+          }
         })
 
         if (resp && resp.ok) {

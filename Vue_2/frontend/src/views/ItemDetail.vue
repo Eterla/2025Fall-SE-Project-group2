@@ -48,7 +48,8 @@
                 <span 
                   v-for="(tag, idx) in item.tags" 
                   :key="idx" 
-                  class="badge bg-secondary me-1"
+                  class="badge me-1"
+                  style="background-color: #900023; color: white;"
                 >
                   {{ tag }}
                 </span>

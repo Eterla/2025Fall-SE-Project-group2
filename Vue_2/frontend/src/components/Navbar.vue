@@ -56,7 +56,8 @@ export default {
   data() {
     return {
       isLogin: false,
-      username: ''
+      username: '',
+      refreshTimer: null
     }
   },
   computed: {
@@ -81,12 +82,25 @@ export default {
       this.loadConversations(store)
       // 也可以尝试建立 socket 连接以接收实时消息（若后端支持 token auth）
       try { socketService.connect(localStorage.getItem('access_token')) } catch (e) { console.warn('socket connect failed', e) }
+      
+      this.refreshTimer = null
+      this._onNewMessage = () => {
+        if (this.refreshTimer) return
+        this.refreshTimer = setTimeout(() => {
+          this.refreshTimer = null
+          this.loadConversations(store)
+        }, 300)
+      }
+      socketService.on('new_message', this._onNewMessage)
     }
   },
   beforeUnmount() {
     // 清理事件监听
     window.removeEventListener('storage', this.checkLoginStatus)
     window.removeEventListener('login-status-changed', this.checkLoginStatus)
+
+    if (this.refreshTimer) clearTimeout(this.refreshTimer)
+    if (this._onNewMessage) socketService.off('new_message', this._onNewMessage)
   },
   methods: {
     async loadConversations(store) {
@@ -101,7 +115,7 @@ export default {
             item_id: conv.item_id,
             last_message_time: conv.last_message_time,
             last_message_content: conv.last_message_content,
-            unreadCount: conv.unread_count
+            unread_count: conv.unread_count
           }))
           store.sessions = mapped
         }

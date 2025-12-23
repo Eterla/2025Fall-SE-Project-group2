@@ -15,7 +15,7 @@ export const useChatStore = defineStore('chat', {
   //    other_username, 
   //    item_id, 
   //    lastMessage, 
-  //    unreadCount }
+  //    unread_count }
   // ]
 
   // messages 的格式：messages: { [conversationId]: Message[] }
@@ -115,9 +115,9 @@ export const useChatStore = defineStore('chat', {
           // only increment unread when this conversation is NOT active
           if (String(this.activeSessionId) === convId) {
             // active session: ensure unread is zero
-            session.unreadCount = 0
+            session.unread_count = 0
           } else if (shouldCountAsUnread) {
-            session.unreadCount = (session.unreadCount || 0) + 1
+            session.unread_count = (session.unread_count || 0) + 1
           }
         } else {
           // insert new session at front
@@ -127,13 +127,13 @@ export const useChatStore = defineStore('chat', {
             other_username: msg.sender_name,
             item_id: msg.item_id,
             lastMessage: msg.content,
-            unreadCount: (String(this.activeSessionId) === convId || msg.is_read) ? 0 : (shouldCountAsUnread ? 1 : 0)
+            unread_count: (String(this.activeSessionId) === convId || msg.is_read) ? 0 : (shouldCountAsUnread ? 1 : 0)
           })
         }
         // extra safety: if this conv is active, ensure its session unreadCount remains 0
         if (String(this.activeSessionId) === convId) {
           const s2 = this.sessions.find(s => String(s.id) === convId)
-          if (s2) s2.unreadCount = 0
+          if (s2) s2.unread_count = 0
         }
       } catch (e) {
         console.error('addMessage error:', e, 'raw message:', raw)
@@ -146,9 +146,9 @@ export const useChatStore = defineStore('chat', {
       let s = this.sessions.find(s => String(s.id) === convId)
       if (s) {
         console.log('markSessionRead for conversationId:', convId)
-        s.unreadCount = 0
+        s.unread_count = 0
       } else {
-        this.upsertSession({ id: convId, unreadCount: 0 })
+        this.upsertSession({ id: convId, unread_count: 0 })
       }
 
       const msgs = this.messages[convId]
@@ -191,7 +191,7 @@ export const useChatStore = defineStore('chat', {
     // 会话总未读数
     totalUnread: (state) => {
       console.log("计算 chat.js 里 totalUnread")
-      return state.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0)
+      return state.sessions.reduce((sum, s) => sum + (s.unread_count || 0), 0)
     }
   }
 })

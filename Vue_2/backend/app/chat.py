@@ -257,3 +257,50 @@ def get_chat_history(other_user_id, item_id):
                 "message": "Fail to get chat history"
             }
         }), 500
+
+@chat_bp.route("/api/messages/conversations/<int:conversation_id>/read", methods=["POST"])
+@token_required
+def set_read_status(conversation_id):
+    data = request.get_json()
+    other_user_id = data.get('other_user_id')
+    item_id = data.get('item_id')
+
+    # 检查商品是否存在
+    item = Item.find_by_id(item_id)
+    if not item:
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "ITEM_NOT_FOUND",
+                "message": "Product not exists"
+            }
+        }), 404
+    
+    # 检查对方用户是否存在
+    other_user = User.find_by_id(other_user_id)
+    if not other_user:
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "USER_NOT_FOUND",
+                "message": "User not exists"
+            }
+        }), 404
+    
+    try:
+        messages = Message.get_conversation(session['user_id'], other_user_id, item_id)
+        print("read_status_set:", messages)
+        return jsonify({
+            "ok": True,
+            "conversation_id": conversation_id,
+            "read_all": True
+        }), 200
+    except Exception as e:
+        logger.exception("Fail to get chat history")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "FETCH_FAILED",
+                "message": "Fail to get chat history"
+            }
+        }), 500

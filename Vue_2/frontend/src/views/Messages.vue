@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container mt-4 mb-3">
     <!-- 加载中提示 -->
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -19,7 +19,7 @@
         class="list-group-item list-group-item-action d-flex gap-3 p-3 cursor-pointer"
         :class="{ 'conversation-muted': conv.item_status && conv.item_status !== 'available' }"
         v-for="conv in conversations" 
-        :key="conv.other_user_id"
+        :key="`${conv.other_user_id}-${conv.item_id}`"
         @click="goToChat(conv.other_user_id, conv.item_id)"
       >
         <!-- 对方头像（用用户名首字母） -->
@@ -63,11 +63,8 @@
             <!-- 未读 badge 固定占位 -->
             <div style="width: 28px; text-align: right;">
               <!-- 有未读显示 badge -->
-              <span
-                v-if="conv.unread_count > 0"
-                class="badge bg-danger"
-              >
-                {{ conv.unread_count }}
+              <span v-if="conv.unread_count > 0" class="badge bg-danger" :data-count="conv.unread_count>99 ? '99plus' : ''">
+                {{ conv.unread_count>99 ? '99+' : conv.unread_count }}
               </span>
 
               <!-- 无未读保持占位，不跳动 -->
@@ -108,6 +105,11 @@ export default {
     };
     socketService.on('new_message', this._onNewMessage);
   },
+  beforeUnmount() {
+    if (this._onNewMessage) {
+      socketService.off('new_message', this._onNewMessage)
+    }
+  },
   methods: {
     // 获取消息会话列表
     async getConversations() {
@@ -129,7 +131,7 @@ export default {
               item_id: conv.item_id,
               last_message_time: conv.last_message_time,
               last_message_content: conv.last_message_content,
-              unreadCount: conv.unread_count
+              unread_count: conv.unread_count
             }
           })
           chatStore.sessions = mapped

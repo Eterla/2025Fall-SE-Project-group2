@@ -94,7 +94,7 @@ def register():
         
     username = data.get('username')
     password = data.get('password')
-    email = data.get('email', '')
+    email = data.get('email')
 
     logger.debug(f"Email received: {email}")
     phone = data.get('phone', '')
@@ -202,37 +202,6 @@ def login():
     }), 200
 
 # 忘记密码接口
-"""
-### 忘记密码
-- URL: `/auth/checkforpasswd`
-- 方法: `POST`
-- 请求体:
-  ```json
-  {
-    "username": "string",
-    "email": "string"
-  }
-  ```
-- 成功响应 (200 OK):
-  ```json
-  {
-    "ok": true,
-    "data": {
-      "access_token": "string",
-      "token_type": "bearer",
-      "expires_in": 86400,
-      "user": {
-        "username": "string",
-        "password": "string",
-        "email": "string"
-      }
-    }
-  }
-  ```
-- 错误响应:
-  - 400 Bad Request: 请求参数错误(如没填邮箱等, 前端如果有提交验证的话，则一般不会出现该错误)
-  - 401 Unauthorized: 用户名与邮箱不匹配(或没有该用户)
-"""
 @auth_bp.route("/api/auth/checkforpasswd", methods=["POST"])
 def check_for_passwd():
     # 状态处在登陆前， 不需要 token 验证

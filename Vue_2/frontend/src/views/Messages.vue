@@ -46,8 +46,7 @@
             <!-- 图片固定占位：50px 宽 -->
             <div style="width: 50px; height: 50px;" class="me-2 flex-shrink-0">
               <img
-                :src="conv.item_image"
-                alt="item image"
+                :src="conv.item_image ? '/' + conv.item_image.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')"
                 style="width: 100%; height: 100%; object-fit: cover;"
               >
             </div>

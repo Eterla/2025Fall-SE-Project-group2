@@ -51,19 +51,24 @@
                 </p>
               </div>
 
-              <!-- 邮箱（可选，根据旧模板是否有） -->
+              <!-- 邮箱 -->
               <div class="mb-3">
-                <label for="email" class="form-label">邮箱（选填）</label>
+                <label for="email" class="form-label">邮箱</label>
                 <input 
                   type="email" 
                   class="form-control" 
                   id="email" 
                   v-model="email" 
-                  placeholder="请输入邮箱"
+                  placeholder="请输入邮箱 (格式: 北大学生邮箱)"
+                  @blur="validateEmail"
                 >
+                <!-- 邮箱格式错误提示 -->
+                <p class="text-danger mt-1" v-if="emailError">
+                  {{ emailError }}
+                </p>
               </div>
 
-              <button type="submit" class="btn btn-red w-100" :disabled="password !== confirmPassword">
+              <button type="submit" class="btn btn-red w-100" :disabled="!isFormValid">
                 注册
               </button>
             </form>
@@ -87,26 +92,67 @@ export default {
       username: '',       // 用户名
       password: '',       // 密码
       confirmPassword: '',// 确认密码
-      email: ''           // 邮箱
+      email: '',          // 邮箱
+      emailError: ''      // 邮箱错误信息
+    }
+  },
+  computed: {
+    // 计算表单是否有效
+    isFormValid() {
+      return this.username && 
+             this.password && 
+             this.confirmPassword && 
+             this.password === this.confirmPassword && 
+             this.validateEmailFormat() && 
+             !this.emailError;
     }
   },
   methods: {
+    // 验证邮箱格式
+    validateEmail() {
+      if (!this.email) {
+        this.emailError = '邮箱不能为空';
+        return false;
+      }
+      
+      if (!this.validateEmailFormat()) {
+        this.emailError = '邮箱格式错误，必须为10位学号@stu.pku.edu.cn格式';
+        return false;
+      }
+      
+      this.emailError = '';
+      return true;
+    },
+    
+    // 验证邮箱格式的具体逻辑
+    validateEmailFormat() {
+      // 正则表达式：10个数字 + @stu.pku.edu.cn
+      const emailPattern = /^\d{10}@stu\.pku\.edu\.cn$/;
+      return emailPattern.test(this.email);
+    },
+    
     async handleRegister() {
-      // 简单验证
+      // 验证密码一致性
       if (this.password !== this.confirmPassword) {
         alert('两次密码不一致');
         return;
       }
+      
+      // 验证邮箱格式
+      if (!this.validateEmail()) {
+        alert('请检查邮箱格式');
+        return;
+      }
 
       try {
-        // 调用后端注册接口（暂时模拟，后续替换为真实请求）
+        // 调用后端注册接口
         const response = await axios.post('/auth/register', {
           username: this.username,
           password: this.password,
           email: this.email
         });
 
-        if (response.ok) {
+        if (response.ok || response.status === 200) {
           alert('注册成功，请登录');
           this.$router.push('/login'); // 跳转到登录页
         } else {

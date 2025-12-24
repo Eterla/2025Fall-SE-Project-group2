@@ -82,52 +82,32 @@
       <!-- 商品列表 -->
       <div class="row" v-else>
         <template v-if="Array.isArray(items) && items.length > 0">
-          <div class="col-md-4 mb-4" v-for="item in items" :key="item.id">
-            <div class="card item-card">
+          <div class="col-md-4 mb-4 d-flex align-items-stretch" v-for="item in items" :key="item.id">
+            <div class="card item-card w-100">
             
               <img 
                 :src="item.image_path ? '/' + item.image_path.replace(/\\/g, '/') : require('@/assets/images/defaultPicture.png')"  
                 class="card-img-top item-image" 
                 :alt="item.title"
               >
-              <div class="card-body">
-                <!-- 新增：标签 + 状态展示区域 -->
+              <div class="card-body d-flex flex-column">
+                <!-- 新增：标签区域 -->
                 <div class="mb-2 d-flex gap-2 flex-wrap">
-                  <!-- 商品标签（tags）：字符串格式 -->
-                  <span 
-                    v-if="item.tags"
-                    class="badge"
-                    style="
-                      background-color: #900023; 
-                      color: white;
-                      padding: 4px 8px;
-                      font-size: 0.75rem;
-                      border-radius: 4px;
-                    "
-                  >
-                    {{ item.tags }}
-                  </span>
-                  <!-- 商品状态（status）：区分不同状态样式 -->
-                  <span 
-                    v-if="item.status"
-                    class="badge"
-                    :style="{
-                      backgroundColor: item.status === '在售' ? '#28a745' : '#6c757d',
-                      color: 'white',
-                      padding: '4px 8px',
-                      fontSize: '0.75rem',
-                      borderRadius: '4px'
-                    }"
-                  >
-                    {{ item.status }}
-                  </span>
-                </div>
+                <!-- 商品标签：拆分字符串→截取前5个→循环渲染独立标签 -->
+                <span 
+                  v-for="(tag, index) in getLimitedTags(item.tags)" 
+                  :key="index"
+                  class="tag-item"
+                >
+                  {{ tag }}
+                </span>
+              </div>
 
                 <h5 class="card-title">{{ item.title }}</h5>
                 <p class="card-text text-danger font-weight-bold">¥{{ item.price }}</p>
                 <!-- 修正：后端字段是created_at，不是createdAt -->
                 <p class="card-text text-muted" style="font-size: 0.9rem;">{{ item.created_at }}</p>
-                <router-link :to="`/item/${item.id}`" class="btn btn-red w-100">查看详情</router-link>
+                <router-link :to="`/item/${item.id}`" class="btn btn-red w-100 mt-auto">查看详情</router-link>
               </div>
             </div>
           </div>
@@ -208,7 +188,14 @@ export default {
     resetSearch() {
       this.searchQuery = '';
       this.fetchItems();
-    }
+    },
+    getLimitedTags(tagsStr) {
+    if (!tagsStr) return []; // 标签为空时返回空数组
+    // 按空格拆分（对应发布时的tags.join(' ')），过滤空值（避免多余空格导致的空标签）
+    const tagsArray = tagsStr.split(' ').filter(tag => tag.trim());
+    // 截取前5个标签
+    return tagsArray.slice(0, 5);
+  }
   }
 }
 </script>
@@ -257,7 +244,7 @@ export default {
 }
 
 .site-title {
-  font-size: 2.8rem;
+  font-size: 3.8rem;
   font-weight: bold;
   margin-bottom: 1rem;
   color: #fff !important;
@@ -335,5 +322,14 @@ export default {
 .item-image {
   width: 100%;
   border-bottom: 1px solid #eee;
+}
+/* 新增：独立标签样式 */
+.tag-item {
+  background-color: #900023;
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  white-space: nowrap; /* 防止标签文字换行 */
 }
 </style>

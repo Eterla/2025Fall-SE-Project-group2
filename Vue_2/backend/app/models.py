@@ -781,7 +781,7 @@ class AI_interface:
             return existing_tags
         else:
             logger.info("AI_interface: generate_tags successfully got response from gemini2_generate.")
-            return existing_tags + ', ' + curr_text.strip()
+            return existing_tags + ' ' + curr_text.strip()
     
     def refine_tagstext2tags(self, tags):
         # Placeholder for future tag refinement logic

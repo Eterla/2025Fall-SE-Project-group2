@@ -83,18 +83,20 @@ def register():
     data = request.get_json()
     
     # 验证必填参数
-    if not data or not data.get('username') or not data.get('password'):
+    if not data or not data.get('username') or not data.get('password') or not data.get('email'):
         return jsonify({
             "ok": False,
             "error": {
                 "code": "INVALID_INPUT",
-                "message": "用户名和密码不能为空"
+                "message": "用户名, 密码, 邮箱都不能为空"
             }
         }), 400
         
     username = data.get('username')
     password = data.get('password')
-    email = data.get('email', '')
+    email = data.get('email')
+
+    logger.debug(f"Email received: {email}")
     phone = data.get('phone', '')
     logger.debug(f"Registering user: {username}, password:{password}, email: {email}, phone: {phone}")
 
@@ -196,6 +198,46 @@ def login():
                 "id": user['id'],
                 "username": user['username']
             }
+        }
+    }), 200
+
+# 忘记密码接口
+@auth_bp.route("/api/auth/checkforpasswd", methods=["POST"])
+def check_for_passwd():
+    # 状态处在登陆前， 不需要 token 验证
+    logger.debug("Received password recovery request")
+    data = request.get_json()
+    # 验证必填参数
+    if not data or not data.get('username') or not data.get('email'):
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "INVALID_INPUT",
+                "message": "用户名和邮箱不能为空"
+            }
+        }), 400
+    username = data.get('username')
+    email = data.get('email')
+    logger.debug(f"Password recovery attempt for user: {username} with email: {email}")
+    # 查询用户
+    user = User.find_by_username(username)
+    if not user or user['email'] != email:
+        logger.info(f"Username and email do not match for user: {username}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "USER_EMAIL_MISMATCH",
+                "message": "用户名与邮箱不匹配"
+            }
+        }), 401
+    # 这里直接返回密码其实是不安全的，实际应用中应发送重置链接到用户邮箱--但是出于项目简单性要求，不再做更多安全上的保障
+    logger.info(f"Password recovery successful for user: {username}")
+    return jsonify({
+        "ok": True,
+        "data": {
+            "username": user['username'],
+            "password": user['password'],  # 注意：实际应用中不应返回密码
+            "email": user['email']
         }
     }), 200
 

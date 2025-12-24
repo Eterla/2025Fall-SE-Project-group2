@@ -358,12 +358,12 @@ class Item:
             image_path = os.path.join('images', filename)
             # 保存文件
             image.save(os.path.join(upload_folder, filename))
-        # Version2: integrate AI tags auto generate function:
-        auto_tags = AI_interface.generate_tags(existing_tags=tags, img_path=os.path.join(upload_folder, filename) if image else None)
+        # # Version2: integrate AI tags auto generate function:
+        # auto_tags = AI_interface.generate_tags(existing_tags=tags, img_path=os.path.join(upload_folder, filename) if image else None)
 
-        # >>>TODO>>>: **Notice: 当前逻辑是直接替换掉原有的tags从而最小程度的减小对其他部分code的改动，但是效果并不一定理想**
-        tags = auto_tags[:255] # ensure tags length limit to 255 characters
-        # <<<TODO<<<  后续确定了修改逻辑之后删除这些多余的Annotations
+        # # >>>TODO>>>: **Notice: 当前逻辑是直接替换掉原有的tags从而最小程度的减小对其他部分code的改动，但是效果并不一定理想**
+        # tags = auto_tags[:255] # ensure tags length limit to 255 characters
+        # # <<<TODO<<<  后续确定了修改逻辑之后删除这些多余的Annotations
 
         # item_id is auto-incremented, so don't need to specify it
         curr_time = datetime.datetime.now() 

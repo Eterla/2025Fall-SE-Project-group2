@@ -127,6 +127,15 @@
         </div>
       </div>
     </div>
+  <!-- 新增：AI生成标签等待弹窗（默认隐藏，submitting为true时显示） -->
+    <div class="ai-loading-modal" v-if="submitting">
+      <div class="ai-loading-content">
+        <div class="spinner-border text-danger mb-3" role="status">
+          <span class="visually-hidden">加载中...</span>
+        </div>
+        <p class="text-center">正在用AI智能化生成更多标签，请耐心等待</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -239,7 +248,8 @@ export default {
         const response = await axios.post('/items', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          timeout: 60000 // 关键：添加60秒超时，解决后端耗时过长问题
         });
 
         if (response.ok) {
@@ -258,3 +268,35 @@ export default {
   }
 }
 </script>
+
+<style>
+/* AI等待弹窗遮罩层 */
+.ai-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色遮罩 */
+  z-index: 9999; /* 确保在最上层 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* AI等待弹窗内容框 */
+.ai-loading-content {
+  background-color: #fff;
+  padding: 2rem 3rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 提示文字样式 */
+.ai-loading-content p {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+}
+</style>

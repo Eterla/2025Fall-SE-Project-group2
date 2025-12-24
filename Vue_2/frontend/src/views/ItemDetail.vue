@@ -38,8 +38,12 @@
               <small class="text-muted">发布时间：{{ item.createdAt }}</small>
             </p>
             <p class="card-text">
-              <small class="text-muted">状态：{{ item.status === 'available' ? '可交易' : '已售出' }}</small>
+              <small class="text-muted">状态：{{ statusText }}</small>
             </p>
+
+            <div v-if="item.status !== 'available'" class="alert alert-warning mt-3" role="alert">
+              此商品当前不可交易。
+            </div>
 
             <!-- 标签展示：使用 item.tags（getItemDetail 已规范化为数组） -->
             <div v-if="item.tags && item.tags.length" class="mt-3">
@@ -67,18 +71,18 @@
             <button 
               class="btn btn-red me-2" 
               @click="goToChat"
-              v-if="isLogin && item.seller_id !== currentUserId"
+              v-if="isLogin && item.seller_id !== currentUserId && item.status === 'available'"
             >
               联系卖家
             </button>
           </div>
         </div>
 
-        <!-- 收藏按钮（登录后显示） -->
+        <!-- 收藏按钮（登录后并且商品可交易时显示） -->
         <button 
           class="btn btn-outline-red" 
           @click="toggleFavorite"
-          v-if="isLogin"
+          v-if="isLogin && item && item.status === 'available'"
         >
           <i class="bi" :class="isFavorite ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
           {{ isFavorite ? '取消收藏' : '收藏商品' }}
@@ -106,10 +110,18 @@ export default {
     }
   },
   created() {
-    // 页面加载时获取商品详情
-    this.getItemDetail();
-    // 检查登录状态
+    // 检查登录状态先于获取详情（以便在获取后检查收藏状态）
     this.checkLoginStatus();
+    this.getItemDetail();
+  },
+  computed: {
+    statusText() {
+      if (!this.item || !this.item.status) return '';
+      if (this.item.status === 'available') return '可交易';
+      if (this.item.status === 'sold') return '已售出';
+      if (this.item.status === 'reserved') return '已保留';
+      return '不可交易';
+    }
   },
   methods: {
 async getItemDetail() {
@@ -163,6 +175,11 @@ async getItemDetail() {
     // 直接从响应数据中获取收藏状态
     this.isFavorite = !!respData.is_favorite;
 
+    // 如果已登录，刷新收藏状态（以防服务端数据更准确）
+    if (this.isLogin) {
+      this.checkFavoriteStatus();
+    }
+
     console.log('解析后的 item:', this.item, 'isFavorite:', this.isFavorite);
   } catch (error) {
     console.error('获取商品详情失败:', error);
@@ -196,6 +213,10 @@ async getItemDetail() {
 
     // 切换收藏状态
     async toggleFavorite() {
+      if (this.item && this.item.status !== 'available') {
+        alert('该商品当前不可交易，无法收藏');
+        return;
+      }
       try {
         if (this.isFavorite) {
           // 取消收藏
@@ -216,6 +237,10 @@ async getItemDetail() {
 
     // 跳转到聊天页面
     async goToChat() {
+      if (this.item && this.item.status !== 'available') {
+        alert('该商品已下架或不可交易，无法联系卖家');
+        return;
+      }
       // const chatStore = useChatStore()
       const otherUserId = this.item.seller_id
       const itemId = this.item.id
@@ -227,14 +252,15 @@ async getItemDetail() {
           content: '你好！我对这个商品感兴趣'  // 发送消息以创建会话
         })
         console.log("ItemDetail, goToChat response:", resp)
-
-      } catch (error) {
-        console.error('创建或获取会话失败:', error)
-      } finally {
+        // 跳转到聊天页面（仅在创建/获取会话成功后）
         this.$router.push({
           name: 'ChatDetail',
           params: { otherUserId: otherUserId, itemId: itemId }
         })
+
+      } catch (error) {
+        console.error('创建或获取会话失败:', error)
+        alert('无法创建会话，请稍后重试')
       }
     }
   }

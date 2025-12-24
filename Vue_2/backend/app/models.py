@@ -563,6 +563,7 @@ class Conversation:
                 u.username as other_username,
                 i.title as item_title,
                 i.image_path as item_image,
+                i.status as item_status,
                 c.last_updated as last_message_time,
                 CASE WHEN c.user1_id = ? THEN c.unread_count_user1 ELSE c.unread_count_user2 END as unread_count,
                 m.content as last_message_content
@@ -583,6 +584,7 @@ class Conversation:
                 'item_id': row['item_id'],
                 'item_title': row['item_title'],
                 'item_image': row['item_image'],
+                'item_status': row['item_status'],
                 'last_message_time': row['last_message_time'],
                 'last_message_content': row['last_message_content'],
                 'unread_count': row['unread_count'] or 0

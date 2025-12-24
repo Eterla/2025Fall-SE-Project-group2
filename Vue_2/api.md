@@ -712,7 +712,6 @@
         "from_user_id": "integer",    //发送方id
         "to_user_id": "integer",      //接受方id
         "item_id": "integer",
-        "item_status": "string", //这也是新的
         "content": "string",
         "is_read": "boolean",
         "created_at": "string",

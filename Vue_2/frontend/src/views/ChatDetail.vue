@@ -19,8 +19,11 @@
             </small>
           </div>
           <div class="card-body d-flex align-items-center gap-3">
+              <!-- 右上角区域：卖家按钮 / 买家提示 -->
               <div class="ms-auto d-flex align-items-center gap-2">
+                <!-- 卖家：显示按钮 -->
                 <button
+                  v-if="isSeller"
                   class="btn btn-success"
                   :disabled="dealProcessing || !canCompleteDeal"
                   @click="confirmCompleteDeal"
@@ -28,6 +31,15 @@
                   <span v-if="dealProcessing" class="spinner-border spinner-border-sm me-1"></span>
                   交易成功
                 </button>
+
+                <!-- 买家：当商品已结束时显示提示（同一位置） -->
+                <span
+                  v-else-if="isDealClosed"
+                  class="badge bg-secondary"
+                  style="font-size: 0.9rem; padding: 0.5rem 0.75rem;"
+                >
+                  该交易已结束
+                </span>
               </div>
             </div>
         </div>
@@ -209,6 +221,15 @@ export default {
       const s = this.relatedItem?.status || this.relatedItem?.item_status
       // 未拉到商品信息时先允许点击也可以；这里选择更稳：必须 available 才能完成
       return !s || s === 'available'
+    },
+    isSeller() {
+      const me = Number(this.currentUserId)
+      const sellerId = Number(this.relatedItem?.seller_id ?? this.relatedItem?.user_id ?? this.relatedItem?.owner_id)
+      return !!me && !!sellerId && me === sellerId
+    },
+    isDealClosed() {
+      const s = this.relatedItem?.status || this.relatedItem?.item_status
+      return !!s && s !== 'available'
     }
   },
   created() {
@@ -566,12 +587,8 @@ export default {
       try {
         // 这里的 URL 需要你按后端实际实现二选一
         // 方案 A：POST /items/{itemId}/complete
-        const resp = await axios.patch(`/items/${this.itemId}/status`, {
-          ok: true,
-          data: {
-            id: Number(this.itemId),
-            status: 'sold'
-          }
+        const resp = await axios.patch(`/api/items/${this.itemId}/status`, {
+          status: 'sold'
         })
 
         if (resp && resp.ok) {

@@ -286,6 +286,9 @@ def get_current_user():
             }
         }), 404
         
+    logger.debug(f"avatar_url: {user.get('avatar_url', '')}")
+    logger.debug(f"Returning user info for user ID: {user['id']}")
+    logger.debug(f"User info: {user}")
     return jsonify({
         "ok": True,
         "data": {
@@ -293,7 +296,9 @@ def get_current_user():
             "username": user['username'],
             "email": user['email'],
             "phone": user['phone'],
-            "created_at": user['created_at'].isoformat()
+            "created_at": user['created_at'],
+            "avatar_url": user.get('avatar_url',)
+
         }
     }), 200
 

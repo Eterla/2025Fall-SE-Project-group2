@@ -72,14 +72,16 @@ class User:
         user = conn.execute(
             "SELECT * FROM users WHERE id = ?", (user_id,)
         ).fetchone()
-        
+        for k, v in dict(user).items():
+            logger.debug(f"User field: {k} = {v}")
         if user:
             return {
                 "id": user['id'],
                 "username": user['username'],
                 "email": user['email'],
                 "phone": user['phone'],
-                "created_at": user['created_at']
+                "created_at": user['created_at'],
+                "avatar_url": user['avatar_url']
             }
         return None
     
@@ -158,15 +160,15 @@ class User:
     @staticmethod
     def upload_avatar(user_id, avatar):
         avatar_path = None
-        upload_folder = os.path.join(current_app.root_path, 'static/avatars')
+        upload_folder = os.path.join(current_app.root_path, 'static/images')
         os.makedirs(upload_folder, exist_ok=True)
             
         ext = secure_filename(avatar.filename).split('.')[-1]
         filename = f"avatar_{user_id}_{uuid.uuid4()}.{ext}"
-        avatar_path = os.path.join('avatars', filename)
+        avatar_path = os.path.join('images', filename)
         avatar.save(os.path.join(upload_folder, filename))
         
-        avatar_url = f"/static/{avatar_path}"
+        avatar_url = f"{avatar_path}"
         
         conn = db.get_db()
         cursor = conn.cursor()

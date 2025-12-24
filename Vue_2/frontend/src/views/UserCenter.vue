@@ -16,9 +16,18 @@
         <div class="card-body">
           <div class="row">
             <div class="col-md-2">
-              <!-- 头像（默认用用户名首字母） -->
-              <div class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center fs-3" style="width: 100px; height: 100px;">
-                {{ userInfo.username.charAt(0).toUpperCase() }}
+              <!-- 头像（有上传则显示，否则用用户名首字母） -->
+              <div 
+                class="avatar bg-red text-white rounded-circle d-flex align-items-center justify-content-center fs-3" 
+                :style="{
+                  width: '100px', 
+                  height: '100px',
+                  backgroundImage: userInfo.avatar_url ? `url(/${userInfo.avatar_url.replace(/\\/g, '/')})` : '',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }"
+              >
+                <span v-if="!userInfo.avatar_url">{{ userInfo.username ? userInfo.username.charAt(0).toUpperCase() : 'U' }}</span>
               </div>
             </div>
             <div class="col-md-10">
@@ -101,21 +110,28 @@ export default {
     // 获取用户信息
     async getUserInfo() {
       try {
-        // 从本地存储获取用户信息（登录时保存的）
-        const userInfoStr = localStorage.getItem('user_info');
-        if (userInfoStr) {
-          this.userInfo = JSON.parse(userInfoStr);
+        // 始终从后端获取最新的用户信息
+        const response = await axios.get('/auth/me');
+        if (response.ok) {
+          this.userInfo = response.data;
+          // 更新本地缓存
+          localStorage.setItem('user_info', JSON.stringify(this.userInfo));
         } else {
-          // 如果本地没有，调用接口获取（实际项目中需要后端接口支持）
-          const response = await axios.get('/auth/me');
-          if (response.ok) {
-            this.userInfo = response.data;
-            localStorage.setItem('user_info', JSON.stringify(this.userInfo)); // 保存到本地
+          // 如果接口失败，尝试从本地缓存读取
+          const userInfoStr = localStorage.getItem('user_info');
+          if (userInfoStr) {
+            this.userInfo = JSON.parse(userInfoStr);
           }
         }
       } catch (error) {
         console.error('获取用户信息失败:', error);
-        alert('获取用户信息失败，请刷新页面重试');
+        // 如果网络错误，尝试从本地缓存读取
+        const userInfoStr = localStorage.getItem('user_info');
+        if (userInfoStr) {
+          this.userInfo = JSON.parse(userInfoStr);
+        } else {
+          alert('获取用户信息失败，请刷新页面重试');
+        }
       }
     },
 

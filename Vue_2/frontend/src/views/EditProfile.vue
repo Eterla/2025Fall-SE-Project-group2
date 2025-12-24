@@ -44,7 +44,7 @@
                              width: '120px', 
                              height: '120px',
                              fontSize: '2.5rem',
-                             backgroundImage: avatarPreview ? `url(${avatarPreview})` : (userInfo.avatar ? `url(${userInfo.avatar})` : ''),
+                             backgroundImage: avatarPreview ? `url(${avatarPreview})` : (userInfo.avatar_url ? `url(/${userInfo.avatar_url.replace(/\\/g, '/')})` : ''),
                              backgroundSize: 'cover',
                              backgroundPosition: 'center'
                            }">

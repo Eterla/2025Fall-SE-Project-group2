@@ -10,7 +10,7 @@ import datetime
 from flask import current_app
 # 在 auth.py 开头的导入部分添加
 from .models import User  # 从当前目录的 models.py 中导入 User 类
-from .exceptions import UsernameTakenError  # 从exceptions.py导入异常  <-- 修改这里
+from .exceptions import UsernameTakenError, InvalidPasswordError  # 从exceptions.py导入异常  <-- 修改这里
 from flask import g  # 导入Flask的全局上下文对象g
 
 auth_bp = Blueprint("auth", __name__)
@@ -272,3 +272,123 @@ def get_current_user():
             "created_at": user['created_at'].isoformat()
         }
     }), 200
+
+@auth_bp.route("/api/auth/update-profile", methods=["PUT"])
+@token_required
+def update_profile():
+    data = request.get_json()
+    
+    # 验证必填参数
+    if not data or not data.get('username') or not data.get('email'):
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "INVALID_INPUT",
+                "message": "用户名和邮箱不能为空"
+            }
+        }), 400
+        
+    username = data.get('username')
+    email = data.get('email')
+    
+    try:
+        updated_user = User.update_profile(session['user_id'], username, email)
+        return jsonify({
+            "ok": True,
+        }), 201
+    except UsernameTakenError:
+        logger.error(f"Username already taken: {username}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "USERNAME_TAKEN",
+                "message": "用户名已被占用"
+            }
+        }), 409
+    except Exception as e:
+        # 捕获其他异常（如数据库错误）
+        logger.error(f"Error during registration: {e}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "SERVER_ERROR",
+                "message": "服务器内部错误"
+            }
+        }), 500
+
+@auth_bp.route("/api/auth/change-password", methods=["PUT"])
+@token_required
+def change_password():
+    data = request.get_json()
+    
+    # 验证必填参数
+    if not data or not data.get('currentPassword') or not data.get('newPassword'):
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "INVALID_INPUT",
+                "message": "密码不能为空"
+            }
+        }), 400
+        
+    old = data.get('currentPassword')
+    new = data.get('newPassword')
+    
+    try:
+        updated_user = User.change_password(session['user_id'], old, generate_password_hash(new, method='pbkdf2:sha256'))
+        return jsonify({
+            "ok": True,
+        }), 201
+    except InvalidPasswordError:
+        logger.error(f"Current password wrong: {old}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "InvalidPassword",
+                "message": "原密码错误"
+            }
+        }), 410
+    except Exception as e:
+        logger.error(f"Error during registration: {e}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "SERVER_ERROR",
+                "message": "服务器内部错误"
+            }
+        }), 500
+
+@auth_bp.route("/api/auth/upload-avatar", methods=["POST"])
+@token_required
+def upload_avatar():
+    try:
+        avatar = request.files.get("avatar")
+    
+        if not avatar:
+            return jsonify({
+                "ok": False,
+                "error": {
+                    "code": "NO_FILE",
+                    "message": "请选择头像文件"
+                }
+            }), 400
+        
+        avatar_url = User.upload_avatar(session["user_id"], avatar)
+
+        return jsonify({
+            "ok": True,
+            "data": {
+                "avatarUrl": avatar_url,
+                "message": "头像上传成功"
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"上传头像失败: {e}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "SERVER_ERROR",
+                "message": "服务器内部错误"
+            }
+        }), 500

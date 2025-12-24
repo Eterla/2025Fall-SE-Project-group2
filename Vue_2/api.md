@@ -57,7 +57,7 @@
   {
     "username": "string",
     "password": "string",
-    "email": "string (可选)",
+    "email": "string (必须)",
     "phone": "string (可选)"
   }
   ```
@@ -106,6 +106,36 @@
 - 错误响应:
   - 400 Bad Request: 请求参数错误(如没填密码等, 前端如果有提交验证的话，则一般不会出现该错误)
   - 401 Unauthorized: 用户名或密码错误
+
+### 忘记密码
+- URL: `/auth/checkforpasswd`
+- 方法: `POST`
+- 请求体:
+  ```json
+  {
+    "username": "string",
+    "email": "string"
+  }
+  ```
+- 成功响应 (200 OK):
+  ```json
+  {
+    "ok": true,
+    "data": {
+      "access_token": "string",
+      "token_type": "bearer",
+      "expires_in": 86400,
+      "user": {
+        "username": "string",
+        "password": "string",
+        "email": "string"
+      }
+    }
+  }
+  ```
+- 错误响应:
+  - 400 Bad Request: 请求参数错误(如没填邮箱等, 前端如果有提交验证的话，则一般不会出现该错误)
+  - 401 Unauthorized: 用户名与邮箱不匹配(或没有该用户)
 
 ### 登出
 
@@ -677,3 +707,27 @@
   - 401 Unauthorized: 未认证
   - 404 Not Found: 商品不存在, 用户不存在
   - 500 服务器内部错误
+
+### 发送消息已读状态
+- URL:`/messeges/conversations`
+- 方法: `POST`
+- 认证: 需要
+- 成功响应 (200 OK):
+  ```json
+  {
+    "id": "integer",
+    "conversation_id": "integer",
+    "is_read": "boolean",
+  }
+  ```
+- 错误响应: 
+```md
+
+原有注册接口更改：
+忘记密码：
+需要暴露一个后端接口用来展示密码：
+后端的存储应该是（用户名，密码，邮箱）三元组
+前端会传入（用户名，邮箱），如果这俩是匹配的，那么就返回对应的密码
+前端会把密码直接告诉用户，不设计更改密码功能
+
+```

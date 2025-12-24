@@ -201,10 +201,13 @@ def login():
         }
     }), 200
 
-# 忘记密码接口
+# 忘记密码接口（生成一次性临时密码并重置）
 @auth_bp.route("/api/auth/checkforpasswd", methods=["POST"])
 def check_for_passwd():
-    # 状态处在登陆前， 不需要 token 验证
+    # 状态处在登陆前，不需要 token 验证
+    import secrets
+    import string
+
     logger.debug("Received password recovery request")
     data = request.get_json()
     # 验证必填参数
@@ -216,9 +219,11 @@ def check_for_passwd():
                 "message": "用户名和邮箱不能为空"
             }
         }), 400
+
     username = data.get('username')
     email = data.get('email')
     logger.debug(f"Password recovery attempt for user: {username} with email: {email}")
+
     # 查询用户
     user = User.find_by_username(username)
     if not user or user['email'] != email:
@@ -230,14 +235,33 @@ def check_for_passwd():
                 "message": "用户名与邮箱不匹配"
             }
         }), 401
-    # 这里直接返回密码其实是不安全的，实际应用中应发送重置链接到用户邮箱--但是出于项目简单性要求，不再做更多安全上的保障
-    logger.info(f"Password recovery successful for user: {username}")
+
+    # 生成一次性临时密码（不返回数据库中的加密密码）
+    alphabet = string.ascii_letters + string.digits
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+
+    # 将临时密码写入数据库（以哈希形式保存）
+    hashed_temp = generate_password_hash(temp_password, method='pbkdf2:sha256')
+    try:
+        User.reset_password(user['id'], hashed_temp)
+    except Exception as e:
+        logger.error(f"Failed to reset password for user {username}: {e}")
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "SERVER_ERROR",
+                "message": "服务器内部错误"
+            }
+        }), 500
+
+    logger.info(f"Temporary password generated for user: {username}")
+    # 返回一次性临时密码，提示尽快修改
     return jsonify({
         "ok": True,
         "data": {
             "username": user['username'],
-            "password": user['password'],  # 注意：实际应用中不应返回密码
-            "email": user['email']
+            "temporaryPassword": temp_password,
+            "message": "已为您生成一次性临时密码，请使用其登录并尽快在个人中心修改。"
         }
     }), 200
 

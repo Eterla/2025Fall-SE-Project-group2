@@ -138,6 +138,22 @@ class User:
             "email": user['email'],
             "created_at": user['created_at']
         }
+
+    @staticmethod
+    def reset_password(user_id, hashed_new):
+        """无须提供旧密码，直接重置（用于忘记密码流程）。"""
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE users
+            SET password = ?
+            WHERE id = ?
+            """,
+            (hashed_new, user_id)
+        )
+        conn.commit()
+        return True
     
     @staticmethod
     def upload_avatar(user_id, avatar):

@@ -83,8 +83,8 @@ def item_detail(item_id):
     # 检查是否已收藏
     is_favorite = False
 
-    # if 'user_id' in session:
-    #     is_favorite = Favorite.is_favorite(session['user_id'], item_id)
+    if 'user_id' in session:
+        is_favorite = Favorite.is_favorite(session['user_id'], item_id)
     
     return jsonify({
         "ok": True,
@@ -106,7 +106,7 @@ def user_items():
     })
 
 # 新增：下架商品
-@main_bp.route("/api/items/<int:item_id>/status", methods=["PUT"])
+@main_bp.route("/api/api/items/<int:item_id>/status", methods=["PATCH"])
 @token_required
 def update_item_status(item_id):
     item = Item.find_by_id(item_id)
@@ -149,7 +149,7 @@ def update_item_status(item_id):
                 "id": item_id,
                 "status": status
             }
-        })
+        }), 200
     else:
         return jsonify({
             "ok": False,
@@ -158,6 +158,56 @@ def update_item_status(item_id):
                 "message": "更新商品状态失败"
             }
         }), 500
+
+# 编辑商品
+@main_bp.route("/api/items/<int:item_id>", methods=["PUT"])
+@token_required
+def edit(item_id):
+    # 处理表单数据（支持文件上传）
+    title = request.form.get("title", "")
+    description = request.form.get("description", "")
+    price = request.form.get("price")
+    status = request.form.get("status")
+    tags = request.form.get("tags", "")
+    image = request.files.get("image")
+    logger.debug(f"publish route recv[ title: {title}, description: {description}, price: {price}, status: {status}, tags: {tags}, image: {image} ]")
+    if not title:
+        return jsonify({
+            "ok": False,
+            "error": {
+                "code": "INVALID_INPUT",
+                "message": "商品标题不能为空"
+            }
+        }), 400
+        
+    try:
+        price_val = float(price) if price else 0.0
+    except ValueError:
+        price_val = 0.0
+    auto_generate_tags = []  # add auto tags logic here that use AI model
+    
+    Item.update_all(item_id, title, description, price_val, status, tags, image)
+    return jsonify({
+        "ok": True,
+        "data": {
+            "id": item_id,
+            "seller_id": session["user_id"],
+            "title": title
+        }
+    }), 201
+
+# 删除商品
+@main_bp.route("/api/items/<int:item_id>", methods=["DELETE"])
+@token_required
+def delete(item_id):
+    Item.delete(item_id)
+    return jsonify({
+        "ok": True,
+        "data": {
+            "id": item_id,
+            "seller_id": session["user_id"],
+        }
+    }), 201
 
 # 新增：收藏商品
 @main_bp.route("/api/favorites", methods=["POST"])

@@ -264,7 +264,7 @@ def set_read_status(conversation_id):
     data = request.get_json()
     other_user_id = data.get('other_user_id')
     item_id = data.get('item_id')
-
+    
     # 检查商品是否存在
     item = Item.find_by_id(item_id)
     if not item:

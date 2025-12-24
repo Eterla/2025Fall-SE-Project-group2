@@ -63,7 +63,7 @@
                   </p>
                   <div class="d-flex gap-2">
                     <router-link :to="`/item/${item.id}`" class="btn btn-outline-primary flex-1">查看</router-link>
-                    <button class="btn btn-outline-warning flex-1" @click="editItem(item.id)">编辑</button>
+                    <router-link :to="`/edit-item/${item.id}`" class="btn btn-outline-primary flex-1">编辑</router-link>
                     <button 
                       class="btn btn-outline-danger flex-1" 
                       @click="changeStatus(item.id, item.status)"
@@ -155,8 +155,8 @@ export default {
 
     // 编辑个人资料（预留方法）
     editProfile() {
-      alert('编辑资料功能待实现');
       // 实际项目中可跳转到编辑页面，或弹出编辑模态框
+      this.$router.push('/editProfile');
     },
 
     // 退出登录

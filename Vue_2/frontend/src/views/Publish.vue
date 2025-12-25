@@ -1,0 +1,302 @@
+<template>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header bg-red text-white">
+            <h3 class="text-center">发布商品</h3>
+          </div>
+          <div class="card-body">
+            <form @submit.prevent="handlePublish">
+              <!-- 商品标题 -->
+              <div class="mb-3">
+                <label for="title" class="form-label">商品标题 <span class="text-danger">*</span></label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="title" 
+                  v-model="form.title" 
+                  required
+                  placeholder="请输入商品标题（如：二手 textbooks）"
+                  maxlength="100"
+                >
+              </div>
+
+              <!-- 商品价格 -->
+              <div class="mb-3">
+                <label for="price" class="form-label">商品价格（元）<span class="text-danger">*</span></label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  id="price" 
+                  v-model="form.price" 
+                  required
+                  min="0.01" 
+                  step="0.01"
+                  placeholder="请输入价格"
+                >
+              </div>
+
+              <!-- 商品标签 -->
+              <div class="mb-3">
+                <label class="form-label">商品标签</label>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <!-- 已选标签展示 -->
+                  <span 
+                    v-for="(tag, index) in form.tags" 
+                    :key="index" 
+                    class="badge bg-secondary d-flex align-items-center gap-1"
+                  >
+                    {{ tag }}
+                    <button 
+                      type="button" 
+                      class="btn-close btn-close-white btn-sm" 
+                      @click="removeTag(index)"
+                    ></button>
+                  </span>
+                </div>
+                <div class="d-flex gap-2">
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    v-model="newTag" 
+                    placeholder="输入标签后点击添加按钮"
+                  >
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary"
+                    @click="addTag"
+                  >
+                    添加标签
+                  </button>
+                </div>
+                <div class="mt-2 text-muted">
+                  <small>常用标签：
+                    <span 
+                      class="badge bg-light text-dark me-1 cursor-pointer"
+                      @click="addTagFromCommon(tag)"
+                      v-for="tag in commonTags" 
+                      :key="tag"
+                    >
+                      {{ tag }}
+                    </span>
+                  </small>
+                </div>
+              </div>
+
+              <!-- 商品描述 -->
+              <div class="mb-3">
+                <label for="description" class="form-label">商品描述 <span class="text-danger">*</span></label>
+                <textarea 
+                  class="form-control" 
+                  id="description" 
+                  v-model="form.description" 
+                  required
+                  rows="5"
+                  placeholder="请描述商品详情（新旧程度、使用情况等）"
+                ></textarea>
+              </div>
+
+              <!-- 商品图片（可选） -->
+              <div class="mb-3">
+                <label for="image" class="form-label">商品图片（可选）</label>
+                <input 
+                  type="file" 
+                  class="form-control" 
+                  id="image" 
+                  accept="image/*"
+                  @change="handleImageUpload"
+                >
+                <!-- 预览选中的图片 -->
+                <div v-if="imagePreview" class="mt-2">
+                  <img :src="imagePreview" class="img-thumbnail" style="max-width: 200px;" alt="预览图">
+                </div>
+              </div>
+
+              <!-- 提交按钮 -->
+              <button 
+                type="submit" 
+                class="btn btn-red w-100" 
+                :disabled="submitting"
+              >
+                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                {{ submitting ? '发布中...' : '发布商品' }}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  <!-- 新增：AI生成标签等待弹窗（默认隐藏，submitting为true时显示） -->
+    <div class="ai-loading-modal" v-if="submitting">
+      <div class="ai-loading-content">
+        <div class="spinner-border text-danger mb-3" role="status">
+          <span class="visually-hidden">加载中...</span>
+        </div>
+        <p class="text-center">正在用AI智能化生成更多标签，请耐心等待</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import axios from '@/axios'
+
+export default {
+  data() {
+    return {
+      // 表单数据
+      form: {
+        title: '',        // 商品标题
+        price: '',        // 商品价格
+        description: '',  // 商品描述
+        image: null,      // 图片文件
+        tags: []          // 商品标签数组
+      },
+      newTag: '',        // 新标签输入框
+      commonTags: ['二手', '教材', '电子产品', '书籍', '生活用品', '全新', '九成新'], // 常用标签
+      imagePreview: '',  // 图片预览地址
+      submitting: false  // 提交状态（防止重复提交）
+    }
+  },
+  methods: {
+    // 处理图片上传预览
+    handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // 限制图片大小（如不超过5MB）
+      if (file.size > 5 * 1024 * 1024) {
+        alert('图片大小不能超过5MB');
+        e.target.value = ''; // 清空选中的文件
+        return;
+      }
+
+      // 预览图片
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        this.imagePreview = event.target.result;
+      };
+      reader.readAsDataURL(file);
+
+      // 保存文件到表单数据
+      this.form.image = file;
+    },
+
+    // 添加标签
+    addTag() {
+       console.log('addTag 方法被调用，当前 newTag 值:', this.newTag);
+      if (!this.newTag.trim()) return;
+      
+      // 防止重复添加
+      if (this.form.tags.includes(this.newTag.trim())) {
+        this.newTag = '';
+        return;
+      }
+      
+      this.form.tags.push(this.newTag.trim());
+      this.newTag = '';
+    },
+
+    // 从常用标签添加
+    addTagFromCommon(tag) {
+      if (!this.form.tags.includes(tag)) {
+        this.form.tags.push(tag);
+      }
+    },
+
+    // 移除标签
+    removeTag(index) {
+      this.form.tags.splice(index, 1);
+    },
+
+    // 提交发布商品
+    async handlePublish() {
+      // 简单验证
+      if (!this.form.title.trim()) {
+        alert('请输入商品标题');
+        return;
+      }
+      if (!this.form.price || this.form.price < 0.01) {
+        alert('请输入有效的商品价格');
+        return;
+      }
+      if (!this.form.description.trim()) {
+        alert('请输入商品描述');
+        return;
+      }
+
+      this.submitting = true; // 开始提交，禁用按钮
+
+      try {
+        // 创建FormData对象（用于上传文件）
+        const formData = new FormData();
+        formData.append('title', this.form.title);
+        formData.append('price', this.form.price);
+        formData.append('description', this.form.description);
+        
+        // 添加标签（用空格分隔）
+        if (this.form.tags.length > 0) {
+          formData.append('tags', this.form.tags.join(' '));
+        }
+        
+        if (this.form.image) {
+          formData.append('image', this.form.image); // 图片文件
+        }
+
+        // 调用后端发布商品接口
+        const response = await axios.post('/items', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 60000 // 关键：添加60秒超时，解决后端耗时过长问题
+        });
+
+        if (response.ok) {
+          alert('商品发布成功！');
+          this.$router.push('/'); // 发布成功后跳回首页
+        } else {
+          alert(response.data.message || '发布失败，请重试');
+        }
+      } catch (error) {
+        console.error('发布商品失败:', error);
+        alert('网络错误，请稍后再试');
+      } finally {
+        this.submitting = false; // 结束提交，启用按钮
+      }
+    }
+  }
+}
+</script>
+
+<style>
+/* AI等待弹窗遮罩层 */
+.ai-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色遮罩 */
+  z-index: 9999; /* 确保在最上层 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* AI等待弹窗内容框 */
+.ai-loading-content {
+  background-color: #fff;
+  padding: 2rem 3rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 提示文字样式 */
+.ai-loading-content p {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+}
+</style>

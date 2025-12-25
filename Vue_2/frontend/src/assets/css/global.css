@@ -1,0 +1,37 @@
+/* 全局样式文件中添加 */
+.btn-red {
+  background-color: #900023 !important; /* 红色背景（与搜索按钮一致） */
+  color: #fff !important; /* 白色文字 */
+  border: none !important;
+}
+
+.btn-red:hover {
+  background-color: #7a001e !important; /*  hover 时略深的红色 */
+}
+
+.btn-red:focus {
+  box-shadow: 0 0 0 0.25rem rgba(144, 0, 35, 0.25) !important; /* 聚焦时的红色阴影 */
+}
+/* 新增：红色背景样式 */
+.bg-red {
+  background-color: #900023 !important;
+}
+
+/* 你可能还需要一个红色边框的样式，以备不时之需 */
+.border-red {
+  border-color: #900023 !important;
+}
+/* 新增：红色边框按钮样式 */
+.btn-outline-red {
+  color: #900023 !important;
+  border-color: #900023 !important;
+}
+
+.btn-outline-red:hover {
+  color: #fff !important;
+  background-color: #900023 !important;
+}
+
+.btn-outline-red:focus {
+  box-shadow: 0 0 0 0.25rem rgba(144, 0, 35, 0.25) !important;
+}

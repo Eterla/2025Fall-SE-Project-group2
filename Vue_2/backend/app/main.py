@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 
-from flask import Blueprint, request, jsonify, session, current_app
+from flask import Blueprint, request, jsonify, session, current_app, send_from_directory
 from .auth import token_required  # 修改为新的装饰器
 from .models import Item, Favorite, User
 from werkzeug.utils import secure_filename
@@ -12,6 +12,12 @@ from datetime import datetime
 from utils import make_response_ok, error_response, make_response_api
 main_bp = Blueprint("main", __name__)
 
+# 提供静态图片文件（商品图片和头像）
+@main_bp.route('/images/<path:filename>')
+def serve_images(filename):
+    """统一提供商品图片和用户头像"""
+    static_folder = os.path.join(current_app.root_path, 'static', 'images')
+    return send_from_directory(static_folder, filename)
 
 @main_bp.route("/")
 def home():

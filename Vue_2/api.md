@@ -122,14 +122,9 @@
   {
     "ok": true,
     "data": {
-      "access_token": "string",
-      "token_type": "bearer",
-      "expires_in": 86400,
-      "user": {
-        "username": "string",
-        "password": "string",
-        "email": "string"
-      }
+      "username": "string",
+      "temporaryPassword": "string",
+      "message": "已为您生成一次性临时密码，请使用其登录并尽快在个人中心修改。"
     }
   }
   ```
